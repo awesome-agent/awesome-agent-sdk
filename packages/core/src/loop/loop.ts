@@ -14,6 +14,7 @@ import type {
   LoopEvent,
   LoopResult,
   LoopState,
+  RunOptions,
   RunnableLoop,
   ToolCallLog,
 } from "./types.js";
@@ -74,6 +75,7 @@ function buildLoopResult(
   return {
     success: finishReason === "complete",
     output,
+    messages: [...messages],
     iterations: state.iteration,
     totalTokens: state.tokenUsage,
     toolCalls: toolCallLogs,
@@ -94,16 +96,17 @@ export class AgenticLoop implements RunnableLoop {
   async run(
     input: string,
     sessionId: string,
-    abort?: AbortSignal
+    options?: RunOptions
   ): Promise<LoopResult> {
     const { agent, hooks } = this.config;
+    const abort = options?.abort;
     const maxIterations = agent.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     let state = createInitialState(maxIterations);
     // Messages are intentionally mutable. The state machine (LoopState) is
     // immutable, but messages use in-place mutation to avoid copying the full
     // array on every iteration — a deliberate performance trade-off for long
     // conversations with large tool results.
-    const messages: Message[] = [];
+    const messages: Message[] = options?.history ? [...options.history] : [];
     const toolCallLogs: ToolCallLog[] = [];
     const emit = (e: LoopEvent): void => this.emit(e);
 
@@ -197,6 +200,7 @@ export class AgenticLoop implements RunnableLoop {
     return {
       success: true,
       output: planResult.text,
+      messages: [...messages],
       iterations: 0,
       totalTokens: state.tokenUsage,
       toolCalls: [],

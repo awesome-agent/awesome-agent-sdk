@@ -218,7 +218,7 @@ describe("E2E Integration", () => {
       })
     );
 
-    const result = await loop.run("Run slow", "s1", controller.signal);
+    const result = await loop.run("Run slow", "s1", { abort: controller.signal });
 
     expect(result.finishReason).toBe("cancelled");
     expect(result.success).toBe(false);

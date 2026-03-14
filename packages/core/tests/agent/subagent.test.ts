@@ -63,8 +63,8 @@ describe("DefaultSubagentRunner", () => {
     let receivedSignal: AbortSignal | undefined;
 
     const mockLoop: RunnableLoop = {
-      run: async (_input, _sessionId, abort) => {
-        receivedSignal = abort;
+      run: async (_input, _sessionId, options) => {
+        receivedSignal = options?.abort;
         return makeLoopResult();
       },
     };

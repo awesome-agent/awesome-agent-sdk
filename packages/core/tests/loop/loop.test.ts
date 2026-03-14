@@ -84,7 +84,7 @@ describe("AgenticLoop", () => {
     llm.addResponse({ text: "should not reach" });
 
     const loop = new AgenticLoop(makeLoopConfig(llm));
-    const result = await loop.run("hi", "session-1", controller.signal);
+    const result = await loop.run("hi", "session-1", { abort: controller.signal });
 
     expect(result.finishReason).toBe("cancelled");
     expect(result.success).toBe(false);

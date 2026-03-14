@@ -31,7 +31,7 @@ export class DefaultSubagentRunner implements SubagentRunner {
     try {
       const loop = this.createLoop(config);
       const sessionId = `sub:${config.parentSessionId}:${Date.now().toString(36)}`;
-      const result = await loop.run(config.task, sessionId, controller.signal);
+      const result = await loop.run(config.task, sessionId, { abort: controller.signal });
       return this.toSubagentResult(result);
     } finally {
       if (timeoutId !== undefined) clearTimeout(timeoutId);
