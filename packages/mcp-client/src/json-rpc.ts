@@ -1,7 +1,7 @@
 // JSON-RPC 2.0 client — sends requests, matches responses by ID
 
 import type { MCPMessage } from "@awesome-agent/agent-core";
-import { MCPRequestError } from "@awesome-agent/agent-core";
+import { MCPRequestError, MCPConnectionError } from "@awesome-agent/agent-core";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -68,7 +68,7 @@ export class JsonRpcClient {
   /** Clear all pending requests (on disconnect) */
   clear(): void {
     for (const [, pending] of this.pending) {
-      pending.reject(new Error("Connection closed"));
+      pending.reject(new MCPConnectionError("Connection closed"));
     }
     this.pending.clear();
   }
