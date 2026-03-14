@@ -1,8 +1,7 @@
-// llm/openai-stream-parser.ts
 // Parses OpenAI-compatible SSE stream chunks into agent-core StreamEvents
 
-import type { StreamEvent, FinishReason } from "./types.js";
-import { parseSSEStream } from "./sse-parser.js";
+import type { StreamEvent, FinishReason } from "@algomim/agent-core";
+import { parseSSEStream } from "@algomim/agent-core";
 
 // ─── OpenAI Wire Format (response) ──────────────────────────
 
@@ -63,16 +62,13 @@ export class OpenAIStreamParser {
         continue;
       }
 
-      // Process delta events
       yield* this.processChunkDelta(chunk, pendingToolCalls);
 
-      // Track finish reason
       const choice = chunk.choices?.[0];
       if (choice?.finish_reason) {
         finishReason = choice.finish_reason;
       }
 
-      // Emit finish when usage arrives (stream_options.include_usage)
       if (chunk.usage) {
         finishEmitted = true;
         yield {
@@ -86,7 +82,6 @@ export class OpenAIStreamParser {
       }
     }
 
-    // Fallback: provider didn't send usage (no stream_options support)
     if (!finishEmitted) {
       yield {
         type: "finish" as const,
@@ -103,16 +98,13 @@ export class OpenAIStreamParser {
     const choice = chunk.choices?.[0];
     if (!choice?.delta) return;
 
-    // Text content
     if (choice.delta.content) {
       yield { type: "text-delta", text: choice.delta.content };
     }
 
-    // Tool call deltas
     if (choice.delta.tool_calls) {
       for (const tc of choice.delta.tool_calls) {
         if (tc.id) {
-          // New tool call starting
           toolCalls.set(tc.index, {
             id: tc.id,
             name: tc.function?.name ?? "",
@@ -124,7 +116,6 @@ export class OpenAIStreamParser {
             name: tc.function?.name ?? "",
           };
         } else {
-          // Argument chunk for existing tool call
           const state = toolCalls.get(tc.index);
           if (state && tc.function?.arguments) {
             state.args += tc.function.arguments;
@@ -138,7 +129,6 @@ export class OpenAIStreamParser {
       }
     }
 
-    // On finish_reason, emit completed tool-call events
     if (choice.finish_reason) {
       for (const [, state] of toolCalls) {
         let args: Record<string, unknown> = {};

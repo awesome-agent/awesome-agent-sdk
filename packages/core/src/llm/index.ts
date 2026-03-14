@@ -13,12 +13,9 @@ export type {
   LLMAdapter,
 } from "./types.js";
 
-// Implementations
+// Implementations (provider-agnostic only)
 export { DefaultLLMStream } from "./stream.js";
 export { parseSSEStream } from "./sse-parser.js";
-export { OpenAIAdapter } from "./openai-adapter.js";
-export type { OpenAIAdapterConfig } from "./openai-adapter.js";
-export { OpenAIStreamParser } from "./openai-stream-parser.js";
 export { MockLLMAdapter } from "./mock-adapter.js";
 export type { MockResponse, MockToolCall } from "./mock-adapter.js";
 export { RetryLLMAdapter } from "./retry-adapter.js";
