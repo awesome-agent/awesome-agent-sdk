@@ -8,7 +8,7 @@ import type {
   LLMToolDefinition,
   Message,
 } from "@awesome-agent/agent-core";
-import { DefaultLLMStream } from "@awesome-agent/agent-core";
+import { DefaultLLMStream, LLMRequestError, LLMStreamError } from "@awesome-agent/agent-core";
 import { AnthropicStreamParser } from "./anthropic-stream-parser.js";
 
 // ─── Config ──────────────────────────────────────────────────
@@ -78,11 +78,11 @@ export class AnthropicAdapter implements LLMAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`LLM request failed (${response.status}): ${text}`);
+      throw new LLMRequestError(response.status, text);
     }
 
     if (!response.body) {
-      throw new Error("Response body is null — streaming not supported");
+      throw new LLMStreamError();
     }
 
     return new DefaultLLMStream(this.parser.parse(response.body));

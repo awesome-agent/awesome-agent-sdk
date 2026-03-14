@@ -7,7 +7,7 @@ import type {
   LLMStream,
   LLMToolDefinition,
 } from "@awesome-agent/agent-core";
-import { DefaultLLMStream } from "@awesome-agent/agent-core";
+import { DefaultLLMStream, LLMRequestError, LLMStreamError } from "@awesome-agent/agent-core";
 import { OpenAIStreamParser } from "./openai-stream-parser.js";
 
 // ─── Config ──────────────────────────────────────────────────
@@ -64,11 +64,11 @@ export class OpenAIAdapter implements LLMAdapter {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`LLM request failed (${response.status}): ${text}`);
+      throw new LLMRequestError(response.status, text);
     }
 
     if (!response.body) {
-      throw new Error("Response body is null — streaming not supported");
+      throw new LLMStreamError();
     }
 
     return new DefaultLLMStream(this.parser.parse(response.body));

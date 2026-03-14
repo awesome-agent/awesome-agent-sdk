@@ -3,13 +3,14 @@
 
 import type { Tool } from "./types.js";
 import type { ToolRegistry } from "./executor-types.js";
+import { DuplicateRegistrationError } from "../errors.js";
 
 export class DefaultToolRegistry implements ToolRegistry {
   private readonly tools = new Map<string, Tool>();
 
   register(tool: Tool): void {
     if (this.tools.has(tool.name)) {
-      throw new Error(`Tool "${tool.name}" is already registered`);
+      throw new DuplicateRegistrationError("Tool", tool.name);
     }
     this.tools.set(tool.name, tool);
   }

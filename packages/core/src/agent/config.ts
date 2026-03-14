@@ -2,6 +2,7 @@
 // AgentConfig builder — single responsibility: build + validate
 
 import type { AgentConfig, PermissionRule } from "./types.js";
+import { ConfigError } from "../errors.js";
 
 // ─── Builder ─────────────────────────────────────────────────
 
@@ -66,9 +67,9 @@ export class AgentConfigBuilder {
   }
 
   build(): AgentConfig {
-    if (!this.partial.id) throw new Error("AgentConfig requires id");
-    if (!this.partial.name) throw new Error("AgentConfig requires name");
-    if (!this.partial.prompt) throw new Error("AgentConfig requires prompt");
+    if (!this.partial.id) throw new ConfigError("AgentConfig requires id");
+    if (!this.partial.name) throw new ConfigError("AgentConfig requires name");
+    if (!this.partial.prompt) throw new ConfigError("AgentConfig requires prompt");
 
     return {
       id: this.partial.id,
