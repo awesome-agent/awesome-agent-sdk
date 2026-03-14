@@ -80,7 +80,7 @@ export class AnthropicStreamParser {
         // Content block start — text or tool_use
         case "content_block_start": {
           const block = event.content_block;
-          if (block?.type === "tool_use" && block.id && block.name != null) {
+          if (block?.type === "tool_use" && block.id && block.name !== null && block.name !== undefined) {
             const index = event.index ?? 0;
             pendingToolCalls.set(index, {
               id: block.id,

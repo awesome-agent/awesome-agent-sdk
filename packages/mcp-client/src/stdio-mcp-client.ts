@@ -147,7 +147,7 @@ export class StdioMCPClient implements MCPClient {
 
     const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
 
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new MCPTimeoutError(method)), timeout);
     });
@@ -160,7 +160,7 @@ export class StdioMCPClient implements MCPClient {
         timeoutPromise,
       ]);
     } finally {
-      clearTimeout(timer!);
+      if (timer) clearTimeout(timer);
     }
   }
 

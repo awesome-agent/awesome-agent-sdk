@@ -37,18 +37,23 @@ export class DefaultLLMStream implements LLMStream {
   }
 
   private async *iterate(): AsyncGenerator<StreamEvent> {
+    let finishReceived = false;
+
     try {
       for await (const event of this.source) {
         if (event.type === "finish") {
+          finishReceived = true;
           this.resolveUsage(event.usage);
           this.resolveFinishReason(event.reason);
         }
         yield event;
       }
     } finally {
-      // Ensure promises resolve even if stream ends without finish event
-      this.resolveUsage({ inputTokens: 0, outputTokens: 0 });
-      this.resolveFinishReason("error");
+      // Fallback: resolve only if stream ended without a finish event
+      if (!finishReceived) {
+        this.resolveUsage({ inputTokens: 0, outputTokens: 0 });
+        this.resolveFinishReason("error");
+      }
     }
   }
 }
