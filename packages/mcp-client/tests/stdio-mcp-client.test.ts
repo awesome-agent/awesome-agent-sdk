@@ -23,24 +23,26 @@ describe("StdioMCPClient", () => {
     expect(client.name).toBe("fal.ai");
   });
 
-  it("throws when calling listTools before connect", async () => {
+  it("throws MCPConnectionError when calling listTools before connect", async () => {
+    const { MCPConnectionError } = await import("@awesome-agent/agent-core");
     const client = new StdioMCPClient({
       id: "test",
       name: "Test",
       command: "echo",
     });
 
-    await expect(client.listTools()).rejects.toThrow("not connected");
+    await expect(client.listTools()).rejects.toBeInstanceOf(MCPConnectionError);
   });
 
-  it("throws when calling callTool before connect", async () => {
+  it("throws MCPConnectionError when calling callTool before connect", async () => {
+    const { MCPConnectionError } = await import("@awesome-agent/agent-core");
     const client = new StdioMCPClient({
       id: "test",
       name: "Test",
       command: "echo",
     });
 
-    await expect(client.callTool("read", {})).rejects.toThrow("not connected");
+    await expect(client.callTool("read", {})).rejects.toBeInstanceOf(MCPConnectionError);
   });
 
   it("disconnect is safe to call without connect", async () => {
