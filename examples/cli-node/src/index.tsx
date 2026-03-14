@@ -101,7 +101,7 @@ function App() {
         type: "stats",
         content: `${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ↑${ti} ↓${to} · ${ti + to} tokens · ${elapsed}s`,
       });
-      addLog({ type: "separator", content: "" });
+      // No separator between messages — only the fixed one above input bar
     } catch (err) {
       addLog({ type: "tool-fail", content: "Error", detail: err instanceof Error ? err.message : String(err) });
     }
