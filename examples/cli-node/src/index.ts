@@ -1,5 +1,5 @@
 // awesome-agent CLI — Claude Code-style terminal interface
-// Raw ANSI rendering, no framework dependency
+// Fixed input bar at bottom, scrolling output above
 
 import {
   AgenticLoop,
@@ -17,28 +17,91 @@ import { execSync } from "node:child_process";
 
 // ─── ANSI Helpers ────────────────────────────────────────────
 
+const ESC = "\x1b";
 const c = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  magenta: "\x1b[35m",
-  cyan: "\x1b[36m",
-  white: "\x1b[37m",
-  gray: "\x1b[90m",
-  red: "\x1b[31m",
-  bgGreen: "\x1b[42m",
-  bgRed: "\x1b[41m",
-  bgCyan: "\x1b[46m",
-  bgYellow: "\x1b[43m",
-  black: "\x1b[30m",
+  reset: `${ESC}[0m`,
+  bold: `${ESC}[1m`,
+  dim: `${ESC}[2m`,
+  green: `${ESC}[32m`,
+  yellow: `${ESC}[33m`,
+  cyan: `${ESC}[36m`,
+  gray: `${ESC}[90m`,
+  red: `${ESC}[31m`,
+  white: `${ESC}[37m`,
 };
 
-function separator() {
-  const width = process.stdout.columns || 80;
-  console.log(`${c.gray}${"─".repeat(width)}${c.reset}`);
+// Terminal dimensions
+function getRows(): number { return process.stdout.rows || 24; }
+function getCols(): number { return process.stdout.columns || 80; }
+
+// Move cursor, clear, scroll region
+function moveTo(row: number, col: number) { process.stdout.write(`${ESC}[${row};${col}H`); }
+function clearLine() { process.stdout.write(`${ESC}[2K`); }
+function saveCursor() { process.stdout.write(`${ESC}7`); }
+function restoreCursor() { process.stdout.write(`${ESC}8`); }
+
+function setScrollRegion(top: number, bottom: number) {
+  process.stdout.write(`${ESC}[${top};${bottom}r`);
+}
+
+function resetScrollRegion() {
+  process.stdout.write(`${ESC}[r`);
+}
+
+// ─── Screen Layout ───────────────────────────────────────────
+// Row 1...(rows-2): scrollable output
+// Row (rows-1): separator
+// Row rows: input bar
+
+function drawSeparator() {
+  const row = getRows() - 1;
+  saveCursor();
+  moveTo(row, 1);
+  clearLine();
+  process.stdout.write(`${c.gray}${"─".repeat(getCols())}${c.reset}`);
+  restoreCursor();
+}
+
+function drawInputBar() {
+  const row = getRows();
+  saveCursor();
+  moveTo(row, 1);
+  clearLine();
+  if (agentRunning) {
+    process.stdout.write(`${c.bold}${c.green}❯${c.reset} ${c.gray}${inputBuffer}${c.reset}`);
+  } else {
+    process.stdout.write(`${c.bold}${c.green}❯${c.reset} ${inputBuffer}`);
+  }
+  restoreCursor();
+}
+
+function writeOutput(text: string) {
+  // Write to scroll region (cursor stays in output area)
+  saveCursor();
+  const outputBottom = getRows() - 2;
+  moveTo(outputBottom, 1);
+  process.stdout.write(text);
+  restoreCursor();
+}
+
+function printLine(text: string) {
+  // Move to bottom of scroll region and print (auto-scrolls)
+  const outputBottom = getRows() - 2;
+  setScrollRegion(1, outputBottom);
+  moveTo(outputBottom, 1);
+  console.log(text);
+  // Reset and redraw fixed elements
+  drawSeparator();
+  drawInputBar();
+}
+
+function printInline(text: string) {
+  const outputBottom = getRows() - 2;
+  setScrollRegion(1, outputBottom);
+  moveTo(outputBottom, 1);
+  process.stdout.write(text);
+  drawSeparator();
+  drawInputBar();
 }
 
 // ─── LLM ─────────────────────────────────────────────────────
@@ -47,8 +110,7 @@ const baseURL = process.env.OPENAI_BASE_URL ?? "https://openrouter.ai/api/v1";
 const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY;
 
 if (!apiKey) {
-  console.error(`${c.red}Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env${c.reset}`);
-  console.error(`${c.gray}cp .env.example .env  # then fill in your key${c.reset}`);
+  console.error(`Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env`);
   process.exit(1);
 }
 
@@ -66,78 +128,44 @@ const tools = new DefaultToolRegistry();
 tools.register({
   name: "read_file",
   description: "Read a file from disk",
-  parameters: {
-    type: "object",
-    properties: { path: { type: "string" } },
-    required: ["path"],
-  },
+  parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
   execute: async (args) => {
-    try {
-      return { success: true, content: await readFile(args.path as string, "utf-8") };
-    } catch (e) {
-      return { success: false, content: `${e}` };
-    }
+    try { return { success: true, content: await readFile(args.path as string, "utf-8") }; }
+    catch (e) { return { success: false, content: `${e}` }; }
   },
 });
 
 tools.register({
   name: "write_file",
   description: "Write content to a file",
-  parameters: {
-    type: "object",
-    properties: {
-      path: { type: "string" },
-      content: { type: "string" },
-    },
-    required: ["path", "content"],
-  },
+  parameters: { type: "object", properties: { path: { type: "string" }, content: { type: "string" } }, required: ["path", "content"] },
   execute: async (args) => {
-    try {
-      await writeFile(args.path as string, args.content as string, "utf-8");
-      return { success: true, content: `Written to ${args.path}` };
-    } catch (e) {
-      return { success: false, content: `${e}` };
-    }
+    try { await writeFile(args.path as string, args.content as string, "utf-8"); return { success: true, content: `Written to ${args.path}` }; }
+    catch (e) { return { success: false, content: `${e}` }; }
   },
 });
 
 tools.register({
   name: "list_dir",
   description: "List files in a directory",
-  parameters: {
-    type: "object",
-    properties: { path: { type: "string" } },
-    required: ["path"],
-  },
+  parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] },
   execute: async (args) => {
-    try {
-      const files = await readdir(args.path as string);
-      return { success: true, content: files.join("\n") };
-    } catch (e) {
-      return { success: false, content: `${e}` };
-    }
+    try { const files = await readdir(args.path as string); return { success: true, content: files.join("\n") }; }
+    catch (e) { return { success: false, content: `${e}` }; }
   },
 });
 
 tools.register({
   name: "run_command",
   description: "Run a shell command (10s timeout)",
-  parameters: {
-    type: "object",
-    properties: { command: { type: "string" } },
-    required: ["command"],
-  },
+  parameters: { type: "object", properties: { command: { type: "string" } }, required: ["command"] },
   execute: async (args) => {
-    try {
-      const output = execSync(args.command as string, { encoding: "utf-8", timeout: 10_000 });
-      return { success: true, content: output };
-    } catch (e) {
-      return { success: false, content: `${e}` };
-    }
+    try { const output = execSync(args.command as string, { encoding: "utf-8", timeout: 10_000 }); return { success: true, content: output }; }
+    catch (e) { return { success: false, content: `${e}` }; }
   },
 });
 
-// ─── Message Queue (Human-in-the-loop) ──────────────────────
+// ─── Message Queue ───────────────────────────────────────────
 
 const pendingMessages: string[] = [];
 
@@ -149,9 +177,7 @@ hooks.register({
   name: "inject-pending-messages",
   event: HookEvent.PreLLMCall,
   handler: async (payload) => {
-    if (pendingMessages.length === 0) {
-      return { action: "continue" as const };
-    }
+    if (pendingMessages.length === 0) return { action: "continue" as const };
 
     const extra = pendingMessages.splice(0).join("\n");
     const request = payload.data.request;
@@ -160,13 +186,11 @@ hooks.register({
       { role: "user", content: `[User interjection]: ${extra}` },
     ];
 
-    console.log(`\n  ${c.yellow}↳ injecting your message${c.reset}`);
+    printLine(`  ${c.yellow}↳ injecting your message into conversation${c.reset}`);
 
     return {
       action: "modify" as const,
-      data: {
-        request: { ...request, messages: updatedMessages },
-      },
+      data: { request: { ...request, messages: updatedMessages } },
     };
   },
 });
@@ -183,9 +207,8 @@ const baseConfig = {
       "list directories, and run commands. Be concise.\n\n" +
       "IMPORTANT: Call only ONE tool at a time. After each tool call, " +
       "briefly explain what you did and what you'll do next before calling " +
-      "the next tool. This helps the user follow your progress.\n\n" +
-      "If you receive a [User interjection], acknowledge it and adjust " +
-      "your plan accordingly.",
+      "the next tool.\n\n" +
+      "If you receive a [User interjection], acknowledge it and adjust your plan.",
     model,
     maxIterations: 15,
   },
@@ -195,13 +218,16 @@ const baseConfig = {
   context: new DefaultContextBuilder(),
 };
 
-// ─── Raw Input Handler ───────────────────────────────────────
+// ─── State ───────────────────────────────────────────────────
 
 let inputBuffer = "";
 let agentRunning = false;
 let history: Message[] = [];
+let streamBuffer = "";
 
-function setupRawInput() {
+// ─── Input Handler ───────────────────────────────────────────
+
+function setupInput() {
   if (!process.stdin.isTTY) return;
 
   process.stdin.setRawMode(true);
@@ -210,105 +236,113 @@ function setupRawInput() {
 
   process.stdin.on("data", (key: string) => {
     if (key === "\x03") { // Ctrl+C
-      console.log("\n");
+      resetScrollRegion();
+      moveTo(getRows(), 1);
+      console.log("");
       process.exit(0);
     }
 
-    if (key === "\r" || key === "\n") { // Enter
+    if (key === "\r" || key === "\n") {
       const text = inputBuffer.trim();
       inputBuffer = "";
-      process.stdout.write("\n");
+      drawInputBar();
 
-      if (!text) {
-        if (!agentRunning) showPrompt();
-        return;
+      if (!text) return;
+
+      if (text === "/exit") {
+        resetScrollRegion();
+        moveTo(getRows(), 1);
+        console.log("");
+        process.exit(0);
       }
 
-      if (text === "/exit") process.exit(0);
       if (text === "/clear") {
         history = [];
         pendingMessages.length = 0;
-        console.log(`  ${c.gray}(conversation cleared)${c.reset}\n`);
-        showPrompt();
+        printLine(`  ${c.gray}(conversation cleared)${c.reset}`);
         return;
       }
 
       if (agentRunning) {
         pendingMessages.push(text);
-        console.log(`  ${c.gray}(queued: "${text}")${c.reset}`);
+        printLine(`  ${c.gray}(queued: "${text}")${c.reset}`);
         return;
       }
 
+      printLine(`${c.bold}${c.green}You:${c.reset} ${text}`);
       runAgent(text);
       return;
     }
 
-    if (key === "\x7f" || key === "\b") { // Backspace
+    if (key === "\x7f" || key === "\b") {
       if (inputBuffer.length > 0) {
         inputBuffer = inputBuffer.slice(0, -1);
-        process.stdout.write("\b \b");
+        drawInputBar();
       }
       return;
     }
 
-    if (key === "\x1b") return; // Escape
-    if (key.startsWith("\x1b[")) return; // Arrow keys
+    if (key.startsWith("\x1b")) return;
 
     inputBuffer += key;
-    process.stdout.write(key);
+    drawInputBar();
   });
-}
-
-function showPrompt() {
-  process.stdout.write(`${c.bold}${c.green}❯${c.reset} `);
 }
 
 // ─── Agent Runner ────────────────────────────────────────────
 
 async function runAgent(text: string) {
   agentRunning = true;
+  drawInputBar();
 
   let lastEventType = "";
-  let currentToolName = "";
   const startTime = Date.now();
+  streamBuffer = "";
 
   const onEvent = (event: LoopEvent) => {
     switch (event.type) {
       case "text:delta":
-        if (lastEventType === "tool:end" || lastEventType === "iteration:end") {
-          process.stdout.write("\n");
-        }
         if (lastEventType !== "text:delta") {
-          process.stdout.write(`\n`);
+          if (streamBuffer) {
+            printLine(streamBuffer);
+            streamBuffer = "";
+          }
+          streamBuffer = "";
         }
-        process.stdout.write(event.text);
+        streamBuffer += event.text;
+        // Print complete lines, keep partial in buffer
+        const lines = streamBuffer.split("\n");
+        while (lines.length > 1) {
+          printLine(lines.shift()!);
+        }
+        streamBuffer = lines[0];
         lastEventType = "text:delta";
         break;
 
-      case "tool:start":
-        currentToolName = event.name;
+      case "tool:start": {
+        if (streamBuffer) {
+          printLine(streamBuffer);
+          streamBuffer = "";
+        }
         const args = Object.entries(event.args)
           .map(([k, v]) => {
-            const val = typeof v === "string" && v.length > 40
-              ? v.slice(0, 40) + "…"
-              : String(v);
+            const val = typeof v === "string" && v.length > 40 ? v.slice(0, 40) + "…" : String(v);
             return `${k}=${val}`;
           })
           .join(", ");
-        console.log(`\n  ${c.green}●${c.reset} ${c.bold}${event.name}${c.reset}(${c.gray}${args}${c.reset})`);
-        process.stdout.write(`  ${c.gray}└ Running…${c.reset}`);
+        printLine(`  ${c.green}●${c.reset} ${c.bold}${event.name}${c.reset}(${c.gray}${args}${c.reset})`);
+        printLine(`  ${c.gray}└ Running…${c.reset}`);
         lastEventType = "tool:start";
         break;
+      }
 
       case "tool:end":
-        // Clear "Running…" line
-        process.stdout.write("\r\x1b[K");
         if (event.result.success) {
-          const preview = event.result.content.split("\n")[0].slice(0, 60);
-          console.log(`  ${c.gray}└ ${c.green}Done${c.reset}${preview ? ` ${c.gray}(${preview}${event.result.content.length > 60 ? "…" : ""})${c.reset}` : ""}`);
+          const preview = event.result.content.split("\n")[0].slice(0, 50);
+          printLine(`  ${c.gray}└ ${c.green}Done${c.reset}${preview ? ` ${c.gray}(${preview})${c.reset}` : ""}`);
         } else {
-          const errPreview = event.result.content.split("\n")[0].slice(0, 60);
-          console.log(`  ${c.gray}└ ${c.red}Failed${c.reset} ${c.gray}(${errPreview})${c.reset}`);
+          const err = event.result.content.split("\n")[0].slice(0, 50);
+          printLine(`  ${c.gray}└ ${c.red}Failed${c.reset} ${c.gray}(${err})${c.reset}`);
         }
         lastEventType = "tool:end";
         break;
@@ -325,43 +359,57 @@ async function runAgent(text: string) {
     const result = await localLoop.run(text, "cli-session", { history });
     history = [...result.messages];
 
+    // Flush remaining stream buffer
+    if (streamBuffer) {
+      printLine(streamBuffer);
+      streamBuffer = "";
+    }
+
     if (!result.output.length) {
-      process.stdout.write(`\n${c.gray}(no response)${c.reset}`);
+      printLine(`${c.gray}(no response)${c.reset}`);
     }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const { input: tokIn, output: tokOut } = result.totalTokens;
-
-    console.log(`\n`);
-    console.log(
+    printLine("");
+    printLine(
       `  ${c.gray}${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ` +
       `↑ ${tokIn} · ↓ ${tokOut} · ` +
-      `${tokIn + tokOut} tokens · ` +
-      `${elapsed}s${c.reset}`
+      `${tokIn + tokOut} tokens · ${elapsed}s${c.reset}`
     );
   } catch (err) {
-    console.log(
-      `\n  ${c.red}Error: ${err instanceof Error ? err.message : String(err)}${c.reset}`
-    );
+    printLine(`  ${c.red}Error: ${err instanceof Error ? err.message : String(err)}${c.reset}`);
   }
 
   agentRunning = false;
-  console.log("");
-  separator();
-  console.log("");
-  showPrompt();
+  printLine(`${c.gray}${"─".repeat(getCols())}${c.reset}`);
+  drawInputBar();
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────
 
-console.clear();
+process.stdout.write(`${ESC}[2J${ESC}[H`); // Clear screen
+
+// Header
 console.log("");
 console.log(`  ${c.bold}${c.cyan}awesome-agent${c.reset} ${c.gray}(${model})${c.reset}`);
-console.log(`  ${c.gray}/clear to reset · /exit or Ctrl+C to quit${c.reset}`);
-console.log(`  ${c.gray}Type while agent works to queue messages${c.reset}`);
-console.log("");
-separator();
+console.log(`  ${c.gray}/clear · /exit · Ctrl+C · type while agent works${c.reset}`);
+console.log(`${c.gray}${"─".repeat(getCols())}${c.reset}`);
 console.log("");
 
-setupRawInput();
-showPrompt();
+// Set up scroll region (output area = row 1 to rows-2)
+setScrollRegion(1, getRows() - 2);
+moveTo(getRows() - 2, 1);
+
+// Draw fixed bottom elements
+drawSeparator();
+drawInputBar();
+
+// Handle terminal resize
+process.stdout.on("resize", () => {
+  setScrollRegion(1, getRows() - 2);
+  drawSeparator();
+  drawInputBar();
+});
+
+setupInput();
