@@ -24,6 +24,7 @@ Your prompt ──────────► │  Gather ───► Act ─�
 | [@awesome-agent/adapter-anthropic](packages/adapter-anthropic) | Anthropic Claude adapter (native Messages API) | Stable |
 | [@awesome-agent/adapter-postgres](packages/adapter-postgres) | PostgreSQL memory store (production) | Stable |
 | [@awesome-agent/adapter-filesystem](packages/adapter-filesystem) | File system memory store (local dev, CLI, debugging) | Stable |
+| [@awesome-agent/mcp-client](packages/mcp-client) | MCP transport (stdio) — connect to any MCP server | Stable |
 
 ## Quick Start
 

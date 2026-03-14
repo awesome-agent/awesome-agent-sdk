@@ -1,0 +1,153 @@
+// StdioMCPClient — spawns an MCP server as child process, communicates via stdin/stdout
+// Used by: Claude Desktop, Cursor, Claude Code — the standard MCP transport
+
+import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
+import { createInterface } from "node:readline";
+import type {
+  MCPClient,
+  MCPMessage,
+  MCPToolDefinition,
+  MCPToolCallResult,
+} from "@awesome-agent/agent-core";
+import { JsonRpcClient } from "./json-rpc.js";
+
+// ─── Configuration ───────────────────────────────────────────
+
+export interface StdioMCPClientConfig {
+  /** Unique identifier for this MCP server */
+  readonly id: string;
+  /** Display name */
+  readonly name: string;
+  /** Command to run (e.g., "npx", "node", "python") */
+  readonly command: string;
+  /** Command arguments (e.g., ["-y", "mcp-fal"]) */
+  readonly args?: readonly string[];
+  /** Environment variables for the child process */
+  readonly env?: Readonly<Record<string, string>>;
+  /** Working directory */
+  readonly cwd?: string;
+  /** Timeout for requests in ms. Default: 30000 */
+  readonly timeout?: number;
+}
+
+// ─── Constants ───────────────────────────────────────────────
+
+const DEFAULT_TIMEOUT = 30_000;
+
+// ─── Implementation ─────────────────────────────────────────
+
+export class StdioMCPClient implements MCPClient {
+  readonly id: string;
+  readonly name: string;
+
+  private readonly config: StdioMCPClientConfig;
+  private readonly rpc = new JsonRpcClient();
+  private process: ChildProcess | null = null;
+  private connected = false;
+
+  constructor(config: StdioMCPClientConfig) {
+    this.id = config.id;
+    this.name = config.name;
+    this.config = config;
+  }
+
+  async connect(): Promise<void> {
+    if (this.connected) return;
+
+    this.process = spawn(this.config.command, [...(this.config.args ?? [])], {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, ...this.config.env },
+      cwd: this.config.cwd,
+    });
+
+    // Read JSON-RPC responses from stdout (one JSON per line)
+    const rl = createInterface({ input: this.process.stdout! });
+    rl.on("line", (line) => {
+      try {
+        const message: MCPMessage = JSON.parse(line);
+        this.rpc.handleMessage(message);
+      } catch {
+        // Non-JSON output — ignore (server logs, etc.)
+      }
+    });
+
+    // Handle process exit
+    this.process.on("exit", () => {
+      this.connected = false;
+      this.rpc.clear();
+    });
+
+    this.connected = true;
+
+    // MCP initialization handshake
+    await this.request("initialize", {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      clientInfo: { name: this.name, version: "0.1.0" },
+    });
+
+    await this.notify("notifications/initialized");
+  }
+
+  async disconnect(): Promise<void> {
+    if (!this.connected || !this.process) return;
+
+    this.rpc.clear();
+    this.process.kill();
+    this.process = null;
+    this.connected = false;
+  }
+
+  async listTools(): Promise<readonly MCPToolDefinition[]> {
+    const result = (await this.request("tools/list", {})) as {
+      tools: MCPToolDefinition[];
+    };
+    return result.tools ?? [];
+  }
+
+  async callTool(
+    name: string,
+    args: Record<string, unknown>
+  ): Promise<MCPToolCallResult> {
+    const result = (await this.request("tools/call", {
+      name,
+      arguments: args,
+    })) as MCPToolCallResult;
+    return result;
+  }
+
+  // ─── Private Helpers ──────────────────────────────────────
+
+  private async request(
+    method: string,
+    params?: Record<string, unknown>
+  ): Promise<unknown> {
+    if (!this.process?.stdin) {
+      throw new Error("MCP client not connected");
+    }
+
+    const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
+
+    return Promise.race([
+      this.rpc.request(method, params, async (msg) => {
+        this.process!.stdin!.write(JSON.stringify(msg) + "\n");
+      }),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`MCP request timed out: ${method}`)),
+          timeout
+        )
+      ),
+    ]);
+  }
+
+  private async notify(method: string): Promise<void> {
+    if (!this.process?.stdin) {
+      throw new Error("MCP client not connected");
+    }
+
+    const msg: MCPMessage = { jsonrpc: "2.0", method };
+    this.process.stdin.write(JSON.stringify(msg) + "\n");
+  }
+}

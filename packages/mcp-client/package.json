@@ -1,0 +1,38 @@
+{
+  "name": "@awesome-agent/mcp-client",
+  "version": "0.1.0",
+  "description": "MCP transport clients (stdio, HTTP) for @awesome-agent/agent-core",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "author": "Kaan Bingol <kaanbingol@outlook.com>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awesome-agent/awesome-agent-sdk.git",
+    "directory": "packages/mcp-client"
+  },
+  "engines": { "node": ">=18.0.0" },
+  "sideEffects": false,
+  "peerDependencies": {
+    "@awesome-agent/agent-core": "*"
+  },
+  "devDependencies": {
+    "@awesome-agent/agent-core": "*",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  }
+}
