@@ -102,13 +102,10 @@ function App() {
   useInput((_, key) => {
     if (key.escape) {
       if (busy && abortRef.current) {
-        // Agent running — abort it
         abortRef.current.abort();
         addLog("tool-fail", "Cancelled", "ESC pressed");
-      } else {
-        // Idle — exit app
-        exit();
       }
+      // ESC never exits — use /exit or Ctrl+C
     }
   });
 
