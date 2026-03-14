@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { RetryLLMAdapter } from "../../src/llm/retry-adapter.js";
 import { MockLLMAdapter } from "../../src/llm/mock-adapter.js";
+import { LLMRequestError } from "../../src/errors.js";
 import type { LLMAdapter, LLMRequest, LLMStream } from "../../src/llm/types.js";
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -11,10 +12,13 @@ const baseRequest: LLMRequest = {
   messages: [{ role: "user", content: "hi" }],
 };
 
-/** LLM adapter that fails N times then succeeds */
+/** LLM adapter that fails N times then succeeds.
+ *  For HTTP errors, pass statusCode + body to throw LLMRequestError.
+ *  For non-HTTP errors, pass statusCode = 0 to throw a plain Error with body as message. */
 function makeFailingAdapter(
   failures: number,
-  errorMsg: string,
+  statusCode: number,
+  body: string,
   successText = "ok"
 ): LLMAdapter {
   let callCount = 0;
@@ -25,7 +29,10 @@ function makeFailingAdapter(
     stream: async (request: LLMRequest): Promise<LLMStream> => {
       callCount++;
       if (callCount <= failures) {
-        throw new Error(errorMsg);
+        if (statusCode > 0) {
+          throw new LLMRequestError(statusCode, body);
+        }
+        throw new Error(body);
       }
       return mock.stream(request);
     },
@@ -58,7 +65,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("retries on 429 and succeeds", async () => {
-    const inner = makeFailingAdapter(1, "LLM request failed (429): rate limited");
+    const inner = makeFailingAdapter(1, 429, "rate limited");
     const adapter = new TestRetryAdapter(inner);
 
     const stream = await adapter.stream(baseRequest);
@@ -71,7 +78,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("retries on 500 and succeeds on third attempt", async () => {
-    const inner = makeFailingAdapter(2, "LLM request failed (500): server error");
+    const inner = makeFailingAdapter(2, 500, "server error");
     const adapter = new TestRetryAdapter(inner);
 
     const stream = await adapter.stream(baseRequest);
@@ -84,7 +91,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("throws after maxRetries exhausted", async () => {
-    const inner = makeFailingAdapter(5, "LLM request failed (500): down");
+    const inner = makeFailingAdapter(5, 500, "down");
     const adapter = new TestRetryAdapter(inner, { maxRetries: 2 });
 
     await expect(adapter.stream(baseRequest)).rejects.toThrow(
@@ -93,7 +100,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("does not retry non-retryable errors (400)", async () => {
-    const inner = makeFailingAdapter(1, "LLM request failed (400): bad request");
+    const inner = makeFailingAdapter(1, 400, "bad request");
 
     const retries: number[] = [];
     const adapter = new TestRetryAdapter(inner, {
@@ -107,14 +114,14 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("does not retry errors without status code", async () => {
-    const inner = makeFailingAdapter(1, "Network error");
+    const inner = makeFailingAdapter(1, 0, "Network error");
     const adapter = new TestRetryAdapter(inner);
 
     await expect(adapter.stream(baseRequest)).rejects.toThrow("Network error");
   });
 
   it("calls onRetry callback with correct info", async () => {
-    const inner = makeFailingAdapter(2, "LLM request failed (503): unavailable");
+    const inner = makeFailingAdapter(2, 503, "unavailable");
     const retries: Array<{ attempt: number; delay: number }> = [];
 
     const adapter = new TestRetryAdapter(inner, {
@@ -132,7 +139,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("respects custom isRetryable predicate", async () => {
-    const inner = makeFailingAdapter(1, "custom error");
+    const inner = makeFailingAdapter(1, 0, "custom error");
 
     const adapter = new TestRetryAdapter(inner, {
       isRetryable: (err) => err.message.includes("custom"),
@@ -148,7 +155,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("caps delay at maxDelay", async () => {
-    const inner = makeFailingAdapter(3, "LLM request failed (429): slow down");
+    const inner = makeFailingAdapter(3, 429, "slow down");
     const delays: number[] = [];
 
     const adapter = new TestRetryAdapter(inner, {
@@ -166,7 +173,7 @@ describe("RetryLLMAdapter", () => {
   });
 
   it("retries on 503 from retryableStatuses", async () => {
-    const inner = makeFailingAdapter(1, "LLM request failed (503): service unavailable");
+    const inner = makeFailingAdapter(1, 503, "service unavailable");
     const adapter = new TestRetryAdapter(inner);
 
     const stream = await adapter.stream(baseRequest);

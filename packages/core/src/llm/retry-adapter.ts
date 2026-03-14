@@ -2,7 +2,7 @@
 // Decorator that adds exponential backoff retry to any LLMAdapter
 
 import type { LLMAdapter, LLMRequest, LLMStream } from "./types.js";
-import { LLMRequestError } from "../errors.js";
+import { AgentError, LLMRequestError } from "../errors.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -53,7 +53,7 @@ export class RetryLLMAdapter implements LLMAdapter {
       try {
         return await this.inner.stream(request);
       } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
+        lastError = err instanceof Error ? err : new AgentError(String(err));
 
         if (attempt === this.maxRetries || !this.shouldRetry(lastError)) {
           throw lastError;

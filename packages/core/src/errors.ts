@@ -112,3 +112,11 @@ export class DuplicateRegistrationError extends AgentError {
     this.itemName = name;
   }
 }
+
+// ─── Error Helpers ────────────────────────────────────────────
+
+/** Wrap an unknown error with context message */
+export function wrapError(context: string, err: unknown): AgentError {
+  const msg = err instanceof Error ? err.message : String(err);
+  return new AgentError(`${context}: ${msg}`);
+}
