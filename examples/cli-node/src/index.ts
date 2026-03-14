@@ -154,16 +154,29 @@ function prompt() {
 
     process.stdout.write("\x1b[36mAgent:\x1b[0m ");
 
+    let lastEventType = "";
+
     const onEvent = (event: LoopEvent) => {
       switch (event.type) {
         case "text:delta":
+          // Add newline before text if previous event was a tool
+          if (lastEventType === "tool:end") {
+            process.stdout.write("\n\n\x1b[36mAgent:\x1b[0m ");
+          }
           process.stdout.write(event.text);
+          lastEventType = "text:delta";
           break;
         case "tool:start":
-          process.stdout.write(`\n  \x1b[33m[${event.name}]\x1b[0m `);
+          process.stdout.write(`\n  \x1b[33m→ ${event.name}\x1b[0m `);
+          lastEventType = "tool:start";
           break;
         case "tool:end":
-          process.stdout.write(event.result.success ? "done" : "failed");
+          process.stdout.write(event.result.success ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m");
+          lastEventType = "tool:end";
+          break;
+        case "iteration:end":
+          // Separate iterations visually
+          lastEventType = "iteration:end";
           break;
       }
     };
