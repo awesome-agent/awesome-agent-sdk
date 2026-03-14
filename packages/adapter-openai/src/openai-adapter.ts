@@ -1,4 +1,3 @@
-// llm/openai-adapter.ts
 // OpenAI-compatible adapter — works with OpenRouter, OpenAI, Groq, Together, Ollama, etc.
 // Responsibility: HTTP communication + request building. Parsing delegated to OpenAIStreamParser.
 
@@ -7,8 +6,8 @@ import type {
   LLMRequest,
   LLMStream,
   LLMToolDefinition,
-} from "./types.js";
-import { DefaultLLMStream } from "./stream.js";
+} from "@algomim/agent-core";
+import { DefaultLLMStream } from "@algomim/agent-core";
 import { OpenAIStreamParser } from "./openai-stream-parser.js";
 
 // ─── Config ──────────────────────────────────────────────────

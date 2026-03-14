@@ -1,7 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { OpenAIAdapter } from "../../src/llm/openai-adapter.js";
-import { sseChunk, makeSSEBody } from "../helpers/sse.js";
-import type { LLMRequest, StreamEvent } from "../../src/llm/types.js";
+import { OpenAIAdapter } from "../src/openai-adapter.js";
+import type { LLMRequest, StreamEvent } from "@algomim/agent-core";
+
+function sseChunk(data: Record<string, unknown>): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+function makeSSEBody(chunks: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+}
 
 function mockFetchResponse(
   chunks: string[],
