@@ -196,6 +196,14 @@ function prompt() {
       if (!result.output.length) {
         process.stdout.write("(no response)");
       }
+
+      // Token usage stats
+      const { input: tokIn, output: tokOut } = result.totalTokens;
+      console.log(
+        `\n\n  \x1b[90m${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ` +
+        `${tokIn} in / ${tokOut} out · ` +
+        `${tokIn + tokOut} total tokens\x1b[0m`
+      );
     } catch (err) {
       process.stdout.write(
         `\x1b[31mError: ${err instanceof Error ? err.message : String(err)}\x1b[0m`
