@@ -6,13 +6,14 @@ import type {
   SkillRegistry,
   SkillDescription,
 } from "./types.js";
+import { DuplicateRegistrationError } from "../errors.js";
 
 export class DefaultSkillRegistry implements SkillRegistry {
   private readonly skills = new Map<string, Skill>();
 
   register(skill: Skill): void {
     if (this.skills.has(skill.name)) {
-      throw new Error(`Skill "${skill.name}" is already registered`);
+      throw new DuplicateRegistrationError("Skill", skill.name);
     }
     this.skills.set(skill.name, skill);
   }

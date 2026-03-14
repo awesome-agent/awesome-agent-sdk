@@ -10,6 +10,7 @@ import type {
 } from "../llm/types.js";
 import type { ToolCall } from "../tool/types.js";
 import { HookEvent } from "../hook/types.js";
+import { LLMBlockedError } from "../errors.js";
 import type { LoopConfig, LoopEvent, LoopState } from "./types.js";
 
 // ─── Result Type ─────────────────────────────────────────────
@@ -60,7 +61,7 @@ export async function thinkPhase(
     sessionId
   );
   if (hookResult.action === "block") {
-    throw new Error(`LLM call blocked: ${hookResult.reason}`);
+    throw new LLMBlockedError(hookResult.reason);
   }
   if (hookResult.action === "modify") {
     request = hookResult.data.request;

@@ -4,6 +4,10 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
+import {
+  MCPConnectionError,
+  MCPTimeoutError,
+} from "@awesome-agent/agent-core";
 import type {
   MCPClient,
   MCPMessage,
@@ -124,7 +128,7 @@ export class StdioMCPClient implements MCPClient {
     params?: Record<string, unknown>
   ): Promise<unknown> {
     if (!this.process?.stdin) {
-      throw new Error("MCP client not connected");
+      throw new MCPConnectionError();
     }
 
     const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
@@ -135,7 +139,7 @@ export class StdioMCPClient implements MCPClient {
       }),
       new Promise((_, reject) =>
         setTimeout(
-          () => reject(new Error(`MCP request timed out: ${method}`)),
+          () => reject(new MCPTimeoutError(method)),
           timeout
         )
       ),
@@ -144,7 +148,7 @@ export class StdioMCPClient implements MCPClient {
 
   private async notify(method: string): Promise<void> {
     if (!this.process?.stdin) {
-      throw new Error("MCP client not connected");
+      throw new MCPConnectionError();
     }
 
     const msg: MCPMessage = { jsonrpc: "2.0", method };

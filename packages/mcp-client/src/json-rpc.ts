@@ -1,6 +1,7 @@
 // JSON-RPC 2.0 client — sends requests, matches responses by ID
 
-import type { MCPMessage, MCPError } from "@awesome-agent/agent-core";
+import type { MCPMessage } from "@awesome-agent/agent-core";
+import { MCPRequestError } from "@awesome-agent/agent-core";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ export class JsonRpcClient {
 
     if (message.error) {
       pending.reject(
-        new Error(`MCP error (${message.error.code}): ${message.error.message}`)
+        new MCPRequestError(message.error.code, message.error.message)
       );
     } else {
       pending.resolve(message.result);
