@@ -143,11 +143,16 @@ describe("thinkPhase", () => {
       handler: async () => ({ action: "block" as const, reason: "rate limit" }),
     });
 
-    await expect(
-      thinkPhase(
+    const { LLMBlockedError } = await import("../../src/errors.js");
+    try {
+      await thinkPhase(
         makeConfig(llm, { hooks }), noopEmit, "system", [], makeState(), "s1"
-      )
-    ).rejects.toThrow("LLM call blocked: rate limit");
+      );
+      expect.unreachable("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(LLMBlockedError);
+      expect((e as InstanceType<typeof LLMBlockedError>).reason).toBe("rate limit");
+    }
   });
 
   it("PreLLMCall hook can modify request", async () => {

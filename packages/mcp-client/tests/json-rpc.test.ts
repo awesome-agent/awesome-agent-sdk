@@ -31,7 +31,8 @@ describe("JsonRpcClient", () => {
     expect(result).toEqual({ tools: ["read", "write"] });
   });
 
-  it("rejects pending request on error response", async () => {
+  it("rejects pending request with MCPRequestError on error response", async () => {
+    const { MCPRequestError } = await import("@awesome-agent/agent-core");
     const client = new JsonRpcClient();
 
     const promise = client.waitForResponse(1);
@@ -42,7 +43,13 @@ describe("JsonRpcClient", () => {
       error: { code: -32600, message: "Invalid Request" },
     });
 
-    await expect(promise).rejects.toThrow("MCP error (-32600): Invalid Request");
+    try {
+      await promise;
+      expect.unreachable("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(MCPRequestError);
+      expect((e as InstanceType<typeof MCPRequestError>).code).toBe(-32600);
+    }
   });
 
   it("ignores messages without matching ID", () => {

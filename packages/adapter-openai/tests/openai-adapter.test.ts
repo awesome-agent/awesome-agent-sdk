@@ -195,28 +195,32 @@ describe("OpenAIAdapter", () => {
     expect(capturedHeaders["Authorization"]).toBe("Bearer test-key");
   });
 
-  it("throws on non-OK response", async () => {
+  it("throws LLMRequestError on non-OK response", async () => {
     vi.stubGlobal("fetch", async () => ({
       ok: false,
       status: 429,
       text: async () => "rate limited",
     }));
 
-    await expect(adapter.stream(baseRequest)).rejects.toThrow(
-      "LLM request failed (429): rate limited"
-    );
+    const { LLMRequestError } = await import("@awesome-agent/agent-core");
+    try {
+      await adapter.stream(baseRequest);
+      expect.unreachable("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(LLMRequestError);
+      expect((e as InstanceType<typeof LLMRequestError>).statusCode).toBe(429);
+    }
   });
 
-  it("throws on null response body", async () => {
+  it("throws LLMStreamError on null response body", async () => {
     vi.stubGlobal("fetch", async () => ({
       ok: true,
       status: 200,
       body: null,
     }));
 
-    await expect(adapter.stream(baseRequest)).rejects.toThrow(
-      "Response body is null"
-    );
+    const { LLMStreamError } = await import("@awesome-agent/agent-core");
+    await expect(adapter.stream(baseRequest)).rejects.toBeInstanceOf(LLMStreamError);
   });
 
   it("emits fallback finish when no usage in stream", async () => {

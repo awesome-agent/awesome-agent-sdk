@@ -114,16 +114,21 @@ describe("AnthropicAdapter", () => {
     expect(capturedHeaders["anthropic-version"]).toBe("2023-06-01");
   });
 
-  it("throws on non-OK response", async () => {
+  it("throws LLMRequestError on non-OK response", async () => {
     vi.stubGlobal("fetch", async () => ({
       ok: false,
       status: 429,
       text: async () => "rate limited",
     }));
 
-    await expect(adapter.stream(baseRequest)).rejects.toThrow(
-      "LLM request failed (429): rate limited"
-    );
+    const { LLMRequestError } = await import("@awesome-agent/agent-core");
+    try {
+      await adapter.stream(baseRequest);
+      expect.unreachable("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(LLMRequestError);
+      expect((e as InstanceType<typeof LLMRequestError>).statusCode).toBe(429);
+    }
   });
 
   it("converts tool messages to tool_result format", async () => {
