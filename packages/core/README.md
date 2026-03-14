@@ -2,7 +2,9 @@
 
 A TypeScript library for building AI agents that can think, use tools, and loop until the job is done.
 
-Zero runtime dependencies. Works with any OpenAI-compatible LLM provider.
+Zero runtime dependencies. Provider-agnostic — bring your own LLM adapter.
+
+Part of the [awesome-agent-sdk](https://github.com/algomim/awesome-agent-sdk) monorepo.
 
 Inspired by [Claude Code](https://docs.anthropic.com/en/docs/claude-code)'s architecture.
 
@@ -34,11 +36,18 @@ Each cycle is called an **iteration**. The agent keeps looping until the LLM dec
 npm install @algomim/agent-core
 ```
 
-You can also import individual modules for tree-shaking:
+You'll also need an LLM adapter:
+
+```bash
+npm install @algomim/adapter-openai    # OpenAI, OpenRouter, Groq, Ollama
+# or
+npm install @algomim/adapter-anthropic  # Claude (coming soon)
+```
+
+You can import individual modules for tree-shaking:
 
 ```typescript
 import { AgenticLoop } from "@algomim/agent-core/loop";
-import { OpenAIAdapter } from "@algomim/agent-core/llm";
 import { DefaultToolRegistry } from "@algomim/agent-core/tool";
 ```
 
@@ -50,12 +59,12 @@ Here's the simplest possible agent — it connects to an LLM and can read files:
 import fs from "fs/promises";
 import {
   AgenticLoop,
-  OpenAIAdapter,
   DefaultToolRegistry,
   DefaultToolExecutor,
   DefaultHookManager,
   DefaultContextBuilder,
 } from "@algomim/agent-core";
+import { OpenAIAdapter } from "@algomim/adapter-openai";
 
 // Step 1: Set up the LLM connection
 // This works with OpenAI, but also Groq, Ollama, OpenRouter — anything
@@ -785,12 +794,13 @@ The parent agent delegates subtasks to child agents. Each child runs its own `Ag
 
 ```typescript
 import {
-  AgenticLoop, OpenAIAdapter,
+  AgenticLoop,
   DefaultToolRegistry, DefaultToolExecutor,
   DefaultHookManager, DefaultContextBuilder,
   DefaultSubagentRunner,
 } from "@algomim/agent-core";
 import type { SubagentConfig } from "@algomim/agent-core";
+import { OpenAIAdapter } from "@algomim/adapter-openai";
 
 const llm = new OpenAIAdapter({
   baseURL: "https://api.openai.com/v1",
@@ -863,7 +873,7 @@ const result = await runner.spawn({
 });
 
 console.log(result.success);    // true
-console.log(result.output);     // "The llm module exports: OpenAIAdapter, MockLLMAdapter, ..."
+console.log(result.output);     // "The llm module exports: MockLLMAdapter, RetryLLMAdapter, ..."
 console.log(result.iterations); // 5
 console.log(result.tokenUsage); // { input: 12000, output: 3400 }
 ```
@@ -1330,9 +1340,14 @@ MCP tools can return images (e.g., viewport captures). These are automatically c
 
 ## LLM Providers
 
-`OpenAIAdapter` works with any provider that speaks the OpenAI chat completions protocol. Just change the URL:
+Install an adapter package, then point it at your provider:
+
+```bash
+npm install @algomim/adapter-openai
+```
 
 ```typescript
+import { OpenAIAdapter } from "@algomim/adapter-openai";
 // OpenAI
 const llm = new OpenAIAdapter({
   baseURL: "https://api.openai.com/v1",
@@ -1364,7 +1379,7 @@ const llm = new OpenAIAdapter({
 });
 ```
 
-To add a completely custom provider (e.g., Anthropic's native API), implement the `LLMAdapter` interface:
+To add a completely custom provider, implement the `LLMAdapter` interface:
 
 ```typescript
 import type { LLMAdapter, LLMRequest, LLMStream } from "@algomim/agent-core";
@@ -1372,7 +1387,7 @@ import type { LLMAdapter, LLMRequest, LLMStream } from "@algomim/agent-core";
 class MyCustomAdapter implements LLMAdapter {
   async stream(request: LLMRequest): Promise<LLMStream> {
     // Connect to your LLM, return a stream of events
-    // See OpenAIAdapter source for a complete example
+    // See @algomim/adapter-openai source for a complete example
   }
 }
 ```
@@ -1384,10 +1399,9 @@ src/
 ├── loop/       Core loop + state machine
 │               AgenticLoop runs: gather → think → execute → verify → repeat
 │
-├── llm/        LLM adapters
-│               OpenAIAdapter (works with any OpenAI-compatible API)
-│               MockLLMAdapter (for testing)
-│               DefaultLLMStream, SSE parser
+├── llm/        LLM interfaces + utilities (provider-agnostic)
+│               LLMAdapter interface, DefaultLLMStream, SSE parser
+│               MockLLMAdapter (testing), RetryLLMAdapter (decorator)
 │
 ├── tool/       Tool system
 │               DefaultToolRegistry (register/lookup tools by name)
