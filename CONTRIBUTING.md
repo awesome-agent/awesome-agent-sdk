@@ -5,7 +5,7 @@ Thank you for your interest in contributing! Here's how to get started.
 ## Development Setup
 
 ```bash
-git clone https://github.com/awesome-agent/sdk.git
+git clone https://github.com/awesome-agent/awesome-agent-sdk.git
 cd awesome-agent-sdk
 npm install
 npm run build -ws
@@ -31,7 +31,7 @@ npm test -ws
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/awesome-agent/sdk/issues). Include:
+Use [GitHub Issues](https://github.com/awesome-agent/awesome-agent-sdk/issues). Include:
 - What you expected
 - What happened
 - Steps to reproduce

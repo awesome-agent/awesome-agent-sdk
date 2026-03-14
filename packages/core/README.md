@@ -4,7 +4,7 @@ A TypeScript library for building AI agents that can think, use tools, and loop 
 
 Zero runtime dependencies. Provider-agnostic — bring your own LLM adapter.
 
-Part of the [awesome-agent-sdk](https://github.com/awesome-agent/sdk) monorepo.
+Part of the [awesome-agent-sdk](https://github.com/awesome-agent/awesome-agent-sdk) monorepo.
 
 Built on the standard agentic loop pattern — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture.
 
