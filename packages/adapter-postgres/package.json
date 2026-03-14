@@ -1,7 +1,7 @@
 {
-  "name": "@awesome-agent/adapter-firestore",
+  "name": "@awesome-agent/adapter-postgres",
   "version": "0.1.0",
-  "description": "Firestore memory & chat store adapter for @awesome-agent/agent-core",
+  "description": "PostgreSQL memory store adapter for @awesome-agent/agent-core",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,22 +18,24 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
+  "author": "Kaan Bingol <kaanbingol@outlook.com>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/awesome-agent/awesome-agent-sdk.git",
-    "directory": "packages/adapter-firestore"
+    "directory": "packages/adapter-postgres"
   },
   "engines": { "node": ">=18.0.0" },
   "sideEffects": false,
   "dependencies": {
-    "firebase-admin": "^13.0.0"
+    "pg": "^8.13.0"
   },
   "peerDependencies": {
     "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
     "@awesome-agent/agent-core": "*",
+    "@types/pg": "^8.11.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
   }

@@ -1,84 +1,81 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { FirestoreMemoryStore } from "../src/firestore-memory-store.js";
-import type {
-  FirestoreInstance,
-  FirestoreCollectionRef,
-  FirestoreDocRef,
-  FirestoreQuery,
-  FirestoreQuerySnapshot,
-  FirestoreDocSnapshot,
-} from "../src/firestore-memory-store.js";
+import { PostgresMemoryStore } from "../src/postgres-memory-store.js";
+import type { PgClient } from "../src/postgres-memory-store.js";
 
-// ─── In-Memory Firestore Mock ────────────────────────────────
+// ─── In-Memory Postgres Mock ─────────────────────────────────
 
-function createMockFirestore(): FirestoreInstance {
-  const store = new Map<string, Map<string, Record<string, unknown>>>();
-
-  function getCollection(path: string): Map<string, Record<string, unknown>> {
-    if (!store.has(path)) store.set(path, new Map());
-    return store.get(path)!;
-  }
+function createMockPgClient(): PgClient {
+  const tables = new Map<string, Record<string, unknown>[]>();
 
   return {
-    collection(path: string): FirestoreCollectionRef {
-      const col = getCollection(path);
+    query: async (text: string, values?: unknown[]) => {
+      const sql = text.trim();
 
-      const makeSnapshot = (
-        docs: Map<string, Record<string, unknown>>
-      ): FirestoreQuerySnapshot => ({
-        empty: docs.size === 0,
-        docs: [...docs.entries()].map(
-          ([id, data]): FirestoreDocSnapshot => ({
-            id,
-            exists: true,
-            data: () => ({ ...data }),
-          })
-        ),
-      });
+      // CREATE TABLE / CREATE INDEX — no-op
+      if (sql.startsWith("CREATE")) {
+        return { rows: [] };
+      }
 
-      return {
-        doc(id?: string): FirestoreDocRef {
-          const docId = id ?? Math.random().toString(36).slice(2, 10);
-          return {
-            set: async (data: Record<string, unknown>) => {
-              col.set(docId, { ...data });
-            },
-            delete: async () => {
-              col.delete(docId);
-            },
-          };
-        },
-        where(field: string, _op: string, value: unknown): FirestoreQuery {
-          return {
-            get: async () => {
-              const values = value as string[];
-              const filtered = new Map<string, Record<string, unknown>>();
-              for (const [id, data] of col) {
-                if (values.includes(data[field] as string)) {
-                  filtered.set(id, data);
-                }
-              }
-              return makeSnapshot(filtered);
-            },
-          };
-        },
-        get: async () => makeSnapshot(col),
-      };
+      // INSERT
+      if (sql.startsWith("INSERT")) {
+        const v = values ?? [];
+        const tableName = "default";
+        if (!tables.has(tableName)) tables.set(tableName, []);
+        tables.get(tableName)!.push({
+          id: v[0],
+          type: v[1],
+          name: v[2],
+          content: v[3],
+          metadata: v[4],
+          created_at: v[5],
+          updated_at: v[6],
+        });
+        return { rows: [] };
+      }
+
+      // DELETE
+      if (sql.startsWith("DELETE")) {
+        const id = values?.[0] as string;
+        const rows = tables.get("default") ?? [];
+        const filtered = rows.filter((r) => r.id !== id);
+        tables.set("default", filtered);
+        return { rows: [] };
+      }
+
+      // SELECT
+      if (sql.startsWith("SELECT")) {
+        let rows = [...(tables.get("default") ?? [])];
+
+        // WHERE type = ANY($1)
+        if (sql.includes("ANY") && values?.[0]) {
+          const types = values[0] as string[];
+          rows = rows.filter((r) => types.includes(r.type as string));
+        }
+
+        // ORDER BY created_at DESC
+        rows.sort(
+          (a, b) => (b.created_at as number) - (a.created_at as number)
+        );
+
+        return { rows };
+      }
+
+      return { rows: [] };
     },
   };
 }
 
 // ─── Tests ───────────────────────────────────────────────────
 
-let store: FirestoreMemoryStore;
+let store: PostgresMemoryStore;
 
 beforeEach(() => {
-  store = new FirestoreMemoryStore({
-    firestore: createMockFirestore(),
+  store = new PostgresMemoryStore({
+    client: createMockPgClient(),
   });
 });
 
-describe("FirestoreMemoryStore", () => {
+describe("PostgresMemoryStore", () => {
   describe("save", () => {
     it("saves and returns entry with generated ID and timestamps", async () => {
       const entry = await store.save({
@@ -123,7 +120,7 @@ describe("FirestoreMemoryStore", () => {
       expect(all).toHaveLength(2);
     });
 
-    it("filters by type using Firestore where query", async () => {
+    it("filters by type", async () => {
       await store.save({ type: "user", name: "a", content: "user info" });
       await store.save({ type: "feedback", name: "b", content: "feedback info" });
       await store.save({ type: "project", name: "c", content: "project info" });
@@ -142,7 +139,7 @@ describe("FirestoreMemoryStore", () => {
       expect(result).toHaveLength(2);
     });
 
-    it("returns empty array when collection is empty", async () => {
+    it("returns empty array when table is empty", async () => {
       const all = await store.getAll();
       expect(all).toHaveLength(0);
     });
@@ -223,44 +220,39 @@ describe("FirestoreMemoryStore", () => {
     });
   });
 
-  describe("scopePath", () => {
-    it("scopes entries to a sub-collection", async () => {
-      const firestore = createMockFirestore();
+  describe("auto-migrate", () => {
+    it("creates table automatically on first operation", async () => {
+      const queries: string[] = [];
+      const mockClient: PgClient = {
+        query: async (text: string, values?: unknown[]) => {
+          queries.push(text.trim().split("\n")[0]);
+          return createMockPgClient().query(text, values);
+        },
+      };
 
-      const user1 = new FirestoreMemoryStore({
-        firestore,
-        scopePath: "users/user1",
-      });
-      const user2 = new FirestoreMemoryStore({
-        firestore,
-        scopePath: "users/user2",
-      });
+      const autoStore = new PostgresMemoryStore({ client: mockClient });
+      await autoStore.save({ type: "user", name: "test", content: "ok" });
 
-      await user1.save({ type: "user", name: "pref", content: "TypeScript" });
-      await user2.save({ type: "user", name: "pref", content: "Python" });
-
-      const user1Entries = await user1.getAll();
-      const user2Entries = await user2.getAll();
-
-      expect(user1Entries).toHaveLength(1);
-      expect(user1Entries[0].content).toBe("TypeScript");
-      expect(user2Entries).toHaveLength(1);
-      expect(user2Entries[0].content).toBe("Python");
+      expect(queries.some((q) => q.startsWith("CREATE TABLE"))).toBe(true);
+      expect(queries.some((q) => q.startsWith("CREATE INDEX"))).toBe(true);
     });
-  });
 
-  describe("custom collection name", () => {
-    it("uses custom collection name", async () => {
-      const firestore = createMockFirestore();
-      const customStore = new FirestoreMemoryStore({
-        firestore,
-        collectionName: "agent_memories",
+    it("skips migration when autoMigrate is false", async () => {
+      const queries: string[] = [];
+      const mockClient: PgClient = {
+        query: async (text: string) => {
+          queries.push(text.trim().split("\n")[0]);
+          return { rows: [] };
+        },
+      };
+
+      const noMigrateStore = new PostgresMemoryStore({
+        client: mockClient,
+        autoMigrate: false,
       });
+      await noMigrateStore.getAll();
 
-      await customStore.save({ type: "user", name: "test", content: "ok" });
-
-      const all = await customStore.getAll();
-      expect(all).toHaveLength(1);
+      expect(queries.every((q) => !q.startsWith("CREATE"))).toBe(true);
     });
   });
 });
