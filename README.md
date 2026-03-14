@@ -23,7 +23,7 @@ Your prompt ──────────► │  Gather ───► Act ─�
 | [@awesome-agent/adapter-openai](packages/adapter-openai) | OpenAI-compatible adapter (OpenAI, OpenRouter, Groq, Ollama, Together) | Stable |
 | @awesome-agent/adapter-anthropic | Claude API adapter | Coming soon |
 | @awesome-agent/adapter-firestore | Firestore memory & chat store | Coming soon |
-| @awesome-agent/adapter-filesystem | File system memory store (local dev) | Coming soon |
+| [@awesome-agent/adapter-filesystem](packages/adapter-filesystem) | File system memory store (local dev, CLI, debugging) | Stable |
 
 ## Quick Start
 
