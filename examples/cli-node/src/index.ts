@@ -1,5 +1,5 @@
-// Simple CLI Agent — Node.js, zero extra dependencies
-// Supports human-in-the-loop: type while agent is working
+// awesome-agent CLI — Claude Code-style terminal interface
+// Raw ANSI rendering, no framework dependency
 
 import {
   AgenticLoop,
@@ -15,14 +15,40 @@ import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 import { readFile, writeFile, readdir } from "node:fs/promises";
 import { execSync } from "node:child_process";
 
+// ─── ANSI Helpers ────────────────────────────────────────────
+
+const c = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
+  red: "\x1b[31m",
+  bgGreen: "\x1b[42m",
+  bgRed: "\x1b[41m",
+  bgCyan: "\x1b[46m",
+  bgYellow: "\x1b[43m",
+  black: "\x1b[30m",
+};
+
+function separator() {
+  const width = process.stdout.columns || 80;
+  console.log(`${c.gray}${"─".repeat(width)}${c.reset}`);
+}
+
 // ─── LLM ─────────────────────────────────────────────────────
 
 const baseURL = process.env.OPENAI_BASE_URL ?? "https://openrouter.ai/api/v1";
 const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY;
 
 if (!apiKey) {
-  console.error("Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env");
-  console.error("cp .env.example .env  # then fill in your key");
+  console.error(`${c.red}Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env${c.reset}`);
+  console.error(`${c.gray}cp .env.example .env  # then fill in your key${c.reset}`);
   process.exit(1);
 }
 
@@ -134,7 +160,7 @@ hooks.register({
       { role: "user", content: `[User interjection]: ${extra}` },
     ];
 
-    console.log(`\n  \x1b[90m(injecting your message into conversation)\x1b[0m`);
+    console.log(`\n  ${c.yellow}↳ injecting your message${c.reset}`);
 
     return {
       action: "modify" as const,
@@ -159,7 +185,7 @@ const baseConfig = {
       "briefly explain what you did and what you'll do next before calling " +
       "the next tool. This helps the user follow your progress.\n\n" +
       "If you receive a [User interjection], acknowledge it and adjust " +
-      "your plan accordingly. The user is watching in real-time.",
+      "your plan accordingly.",
     model,
     maxIterations: 15,
   },
@@ -170,7 +196,6 @@ const baseConfig = {
 };
 
 // ─── Raw Input Handler ───────────────────────────────────────
-// Reads keystrokes directly — allows typing while agent is running
 
 let inputBuffer = "";
 let agentRunning = false;
@@ -184,39 +209,33 @@ function setupRawInput() {
   process.stdin.setEncoding("utf-8");
 
   process.stdin.on("data", (key: string) => {
-    // Ctrl+C
-    if (key === "\x03") {
+    if (key === "\x03") { // Ctrl+C
       console.log("\n");
       process.exit(0);
     }
 
-    // Enter
-    if (key === "\r" || key === "\n") {
+    if (key === "\r" || key === "\n") { // Enter
       const text = inputBuffer.trim();
       inputBuffer = "";
+      process.stdout.write("\n");
 
       if (!text) {
         if (!agentRunning) showPrompt();
         return;
       }
 
-      process.stdout.write("\n");
-
-      if (text === "/exit") {
-        process.exit(0);
-      }
+      if (text === "/exit") process.exit(0);
       if (text === "/clear") {
         history = [];
         pendingMessages.length = 0;
-        console.log("  (conversation cleared)\n");
+        console.log(`  ${c.gray}(conversation cleared)${c.reset}\n`);
         showPrompt();
         return;
       }
 
       if (agentRunning) {
-        // Queue message — will be injected via hook
         pendingMessages.push(text);
-        console.log(`  \x1b[90m(queued: "${text}" — sending to agent next iteration)\x1b[0m`);
+        console.log(`  ${c.gray}(queued: "${text}")${c.reset}`);
         return;
       }
 
@@ -224,8 +243,7 @@ function setupRawInput() {
       return;
     }
 
-    // Backspace
-    if (key === "\x7f" || key === "\b") {
+    if (key === "\x7f" || key === "\b") { // Backspace
       if (inputBuffer.length > 0) {
         inputBuffer = inputBuffer.slice(0, -1);
         process.stdout.write("\b \b");
@@ -233,44 +251,68 @@ function setupRawInput() {
       return;
     }
 
-    // Escape sequences (arrows, etc.) — ignore
-    if (key.startsWith("\x1b")) return;
+    if (key === "\x1b") return; // Escape
+    if (key.startsWith("\x1b[")) return; // Arrow keys
 
-    // Regular character
     inputBuffer += key;
     process.stdout.write(key);
   });
 }
 
 function showPrompt() {
-  process.stdout.write("\x1b[32mYou:\x1b[0m ");
+  process.stdout.write(`${c.bold}${c.green}❯${c.reset} `);
 }
 
 // ─── Agent Runner ────────────────────────────────────────────
 
 async function runAgent(text: string) {
   agentRunning = true;
-  process.stdout.write("\x1b[36mAgent:\x1b[0m ");
 
   let lastEventType = "";
+  let currentToolName = "";
+  const startTime = Date.now();
 
   const onEvent = (event: LoopEvent) => {
     switch (event.type) {
       case "text:delta":
-        if (lastEventType === "tool:end") {
-          process.stdout.write("\n\n\x1b[36mAgent:\x1b[0m ");
+        if (lastEventType === "tool:end" || lastEventType === "iteration:end") {
+          process.stdout.write("\n");
+        }
+        if (lastEventType !== "text:delta") {
+          process.stdout.write(`\n`);
         }
         process.stdout.write(event.text);
         lastEventType = "text:delta";
         break;
+
       case "tool:start":
-        process.stdout.write(`\n  \x1b[33m→ ${event.name}\x1b[0m `);
+        currentToolName = event.name;
+        const args = Object.entries(event.args)
+          .map(([k, v]) => {
+            const val = typeof v === "string" && v.length > 40
+              ? v.slice(0, 40) + "…"
+              : String(v);
+            return `${k}=${val}`;
+          })
+          .join(", ");
+        console.log(`\n  ${c.green}●${c.reset} ${c.bold}${event.name}${c.reset}(${c.gray}${args}${c.reset})`);
+        process.stdout.write(`  ${c.gray}└ Running…${c.reset}`);
         lastEventType = "tool:start";
         break;
+
       case "tool:end":
-        process.stdout.write(event.result.success ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m");
+        // Clear "Running…" line
+        process.stdout.write("\r\x1b[K");
+        if (event.result.success) {
+          const preview = event.result.content.split("\n")[0].slice(0, 60);
+          console.log(`  ${c.gray}└ ${c.green}Done${c.reset}${preview ? ` ${c.gray}(${preview}${event.result.content.length > 60 ? "…" : ""})${c.reset}` : ""}`);
+        } else {
+          const errPreview = event.result.content.split("\n")[0].slice(0, 60);
+          console.log(`  ${c.gray}└ ${c.red}Failed${c.reset} ${c.gray}(${errPreview})${c.reset}`);
+        }
         lastEventType = "tool:end";
         break;
+
       case "iteration:end":
         lastEventType = "iteration:end";
         break;
@@ -284,31 +326,42 @@ async function runAgent(text: string) {
     history = [...result.messages];
 
     if (!result.output.length) {
-      process.stdout.write("(no response)");
+      process.stdout.write(`\n${c.gray}(no response)${c.reset}`);
     }
 
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const { input: tokIn, output: tokOut } = result.totalTokens;
+
+    console.log(`\n`);
     console.log(
-      `\n\n  \x1b[90m${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ` +
-      `${tokIn} in / ${tokOut} out · ` +
-      `${tokIn + tokOut} total tokens\x1b[0m`
+      `  ${c.gray}${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ` +
+      `↑ ${tokIn} · ↓ ${tokOut} · ` +
+      `${tokIn + tokOut} tokens · ` +
+      `${elapsed}s${c.reset}`
     );
   } catch (err) {
-    process.stdout.write(
-      `\x1b[31mError: ${err instanceof Error ? err.message : String(err)}\x1b[0m`
+    console.log(
+      `\n  ${c.red}Error: ${err instanceof Error ? err.message : String(err)}${c.reset}`
     );
   }
 
   agentRunning = false;
-  console.log("\n");
+  console.log("");
+  separator();
+  console.log("");
   showPrompt();
 }
 
 // ─── Bootstrap ───────────────────────────────────────────────
 
-console.log(`\n  awesome-agent CLI (${model})`);
-console.log("  Type a message. /clear to reset, /exit or Ctrl+C to quit.");
-console.log("  You can type while the agent is working — messages are queued.\n");
+console.clear();
+console.log("");
+console.log(`  ${c.bold}${c.cyan}awesome-agent${c.reset} ${c.gray}(${model})${c.reset}`);
+console.log(`  ${c.gray}/clear to reset · /exit or Ctrl+C to quit${c.reset}`);
+console.log(`  ${c.gray}Type while agent works to queue messages${c.reset}`);
+console.log("");
+separator();
+console.log("");
 
 setupRawInput();
 showPrompt();
