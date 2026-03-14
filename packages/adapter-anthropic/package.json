@@ -16,8 +16,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
+  "author": "Kaan Bingol <kaanbingol@outlook.com>",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

@@ -5,6 +5,11 @@ import { StdioMCPClient } from "../src/stdio-mcp-client.js";
 // StdioMCPClient spawns real child processes. These tests verify
 // configuration and error handling without requiring an actual
 // MCP server. Integration tests with real servers belong in examples/.
+//
+// Tests for connect(), listTools(), and callTool() with a live server
+// are intentionally omitted here. They require a running MCP server
+// process, making them integration tests rather than unit tests.
+// See examples/ for end-to-end usage.
 
 describe("StdioMCPClient", () => {
   afterEach(() => {

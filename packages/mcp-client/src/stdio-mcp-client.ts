@@ -14,7 +14,7 @@ import type {
   MCPToolDefinition,
   MCPToolCallResult,
 } from "@awesome-agent/agent-core";
-import { JsonRpcClient } from "./json-rpc.js";
+import { JsonRpcClient, JSONRPC_VERSION } from "./json-rpc.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -39,6 +39,11 @@ export interface StdioMCPClientConfig {
 
 const DEFAULT_TIMEOUT = 30_000;
 const CLIENT_VERSION = "0.1.0";
+const MCP_PROTOCOL_VERSION = "2024-11-05";
+const MCP_METHOD_INITIALIZE = "initialize";
+const MCP_METHOD_INITIALIZED = "notifications/initialized";
+const MCP_METHOD_LIST_TOOLS = "tools/list";
+const MCP_METHOD_CALL_TOOL = "tools/call";
 
 // ─── Implementation ─────────────────────────────────────────
 
@@ -86,13 +91,13 @@ export class StdioMCPClient implements MCPClient {
     this.connected = true;
 
     // MCP initialization handshake
-    await this.request("initialize", {
-      protocolVersion: "2024-11-05",
+    await this.request(MCP_METHOD_INITIALIZE, {
+      protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {},
       clientInfo: { name: this.name, version: CLIENT_VERSION },
     });
 
-    await this.notify("notifications/initialized");
+    await this.notify(MCP_METHOD_INITIALIZED);
   }
 
   async disconnect(): Promise<void> {
@@ -105,7 +110,7 @@ export class StdioMCPClient implements MCPClient {
   }
 
   async listTools(): Promise<readonly MCPToolDefinition[]> {
-    const result = (await this.request("tools/list", {})) as {
+    const result = (await this.request(MCP_METHOD_LIST_TOOLS, {})) as {
       tools: MCPToolDefinition[];
     };
     return result.tools ?? [];
@@ -115,7 +120,7 @@ export class StdioMCPClient implements MCPClient {
     name: string,
     args: Record<string, unknown>
   ): Promise<MCPToolCallResult> {
-    const result = (await this.request("tools/call", {
+    const result = (await this.request(MCP_METHOD_CALL_TOOL, {
       name,
       arguments: args,
     })) as MCPToolCallResult;
@@ -130,6 +135,10 @@ export class StdioMCPClient implements MCPClient {
     }
   }
 
+  private sendMessage(msg: MCPMessage): void {
+    this.process!.stdin!.write(JSON.stringify(msg) + "\n");
+  }
+
   private async request(
     method: string,
     params?: Record<string, unknown>
@@ -138,23 +147,27 @@ export class StdioMCPClient implements MCPClient {
 
     const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
 
-    return Promise.race([
-      this.rpc.request(method, params, async (msg) => {
-        this.process!.stdin!.write(JSON.stringify(msg) + "\n");
-      }),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new MCPTimeoutError(method)),
-          timeout
-        )
-      ),
-    ]);
+    let timer: ReturnType<typeof setTimeout>;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new MCPTimeoutError(method)), timeout);
+    });
+
+    try {
+      return await Promise.race([
+        this.rpc.request(method, params, async (msg) => {
+          this.sendMessage(msg);
+        }),
+        timeoutPromise,
+      ]);
+    } finally {
+      clearTimeout(timer!);
+    }
   }
 
   private async notify(method: string): Promise<void> {
     this.ensureConnected();
 
-    const msg: MCPMessage = { jsonrpc: "2.0", method };
-    this.process!.stdin!.write(JSON.stringify(msg) + "\n");
+    const msg: MCPMessage = { jsonrpc: JSONRPC_VERSION, method };
+    this.sendMessage(msg);
   }
 }
