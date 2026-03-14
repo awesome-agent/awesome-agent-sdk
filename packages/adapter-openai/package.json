@@ -1,7 +1,7 @@
 {
-  "name": "@algomim/adapter-openai",
+  "name": "@awesome-agent/adapter-openai",
   "version": "0.1.0",
-  "description": "OpenAI-compatible adapter for @algomim/agent-core (OpenAI, OpenRouter, Groq, Ollama, Together)",
+  "description": "OpenAI-compatible adapter for @awesome-agent/agent-core (OpenAI, OpenRouter, Groq, Ollama, Together)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,16 +21,16 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/algomim/awesome-agent-sdk.git",
+    "url": "https://github.com/awesome-agent/sdk.git",
     "directory": "packages/adapter-openai"
   },
   "engines": { "node": ">=18.0.0" },
   "sideEffects": false,
   "peerDependencies": {
-    "@algomim/agent-core": "*"
+    "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
-    "@algomim/agent-core": "*",
+    "@awesome-agent/agent-core": "*",
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
   }

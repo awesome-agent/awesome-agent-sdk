@@ -4,7 +4,7 @@ A TypeScript library for building AI agents that can think, use tools, and loop 
 
 Zero runtime dependencies. Provider-agnostic — bring your own LLM adapter.
 
-Part of the [awesome-agent-sdk](https://github.com/algomim/awesome-agent-sdk) monorepo.
+Part of the [awesome-agent-sdk](https://github.com/awesome-agent/sdk) monorepo.
 
 Built on the standard agentic loop pattern — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture.
 
@@ -33,22 +33,22 @@ Each cycle is called an **iteration**. The agent keeps looping until the LLM dec
 ## Installation
 
 ```bash
-npm install @algomim/agent-core
+npm install @awesome-agent/agent-core
 ```
 
 You'll also need an LLM adapter:
 
 ```bash
-npm install @algomim/adapter-openai    # OpenAI, OpenRouter, Groq, Ollama
+npm install @awesome-agent/adapter-openai    # OpenAI, OpenRouter, Groq, Ollama
 # or
-npm install @algomim/adapter-anthropic  # Claude (coming soon)
+npm install @awesome-agent/adapter-anthropic  # Claude (coming soon)
 ```
 
 You can import individual modules for tree-shaking:
 
 ```typescript
-import { AgenticLoop } from "@algomim/agent-core/loop";
-import { DefaultToolRegistry } from "@algomim/agent-core/tool";
+import { AgenticLoop } from "@awesome-agent/agent-core/loop";
+import { DefaultToolRegistry } from "@awesome-agent/agent-core/tool";
 ```
 
 ## Quick Start
@@ -63,8 +63,8 @@ import {
   DefaultToolExecutor,
   DefaultHookManager,
   DefaultContextBuilder,
-} from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 // Step 1: Set up the LLM connection
 // This works with OpenAI, but also Groq, Ollama, OpenRouter — anything
@@ -303,7 +303,7 @@ Hooks let you intercept the loop at key points. You can **block** actions, **mod
 - `"modify"` — change the data before it proceeds
 
 ```typescript
-import { DefaultHookManager, HookEvent } from "@algomim/agent-core";
+import { DefaultHookManager, HookEvent } from "@awesome-agent/agent-core";
 
 const hooks = new DefaultHookManager();
 
@@ -433,7 +433,7 @@ Middleware wraps **every** tool call with before/after logic. Unlike hooks (whic
 Use cases: logging, timing, caching, arg sanitization, rate limiting.
 
 ```typescript
-import { MiddlewarePipeline, DefaultToolExecutor } from "@algomim/agent-core";
+import { MiddlewarePipeline, DefaultToolExecutor } from "@awesome-agent/agent-core";
 
 const pipeline = new MiddlewarePipeline();
 
@@ -476,7 +476,7 @@ const executor = new DefaultToolExecutor(tools, pipeline);
 Without skills, every LLM call includes the same system prompt — even if the user asks about something the prompt doesn't cover. With skills, **specialized knowledge loads only when relevant**.
 
 ```typescript
-import { DefaultSkillRegistry, DefaultSkillDetector } from "@algomim/agent-core";
+import { DefaultSkillRegistry, DefaultSkillDetector } from "@awesome-agent/agent-core";
 
 const skills = new DefaultSkillRegistry();
 
@@ -554,7 +554,7 @@ LLMs have a context window (e.g., 128K tokens). Long conversations can exceed it
 **Strategy A: Pruning** — Drop the oldest messages to stay under the limit. Fast but lossy.
 
 ```typescript
-import { DefaultPruner } from "@algomim/agent-core";
+import { DefaultPruner } from "@awesome-agent/agent-core";
 
 const loop = new AgenticLoop({
   // ...other config...
@@ -569,7 +569,7 @@ const loop = new AgenticLoop({
 **Strategy B: Compaction** — Use the LLM to summarize old messages. Slower but preserves knowledge.
 
 ```typescript
-import { LLMCompactor } from "@algomim/agent-core";
+import { LLMCompactor } from "@awesome-agent/agent-core";
 
 const loop = new AgenticLoop({
   // ...other config...
@@ -798,9 +798,9 @@ import {
   DefaultToolRegistry, DefaultToolExecutor,
   DefaultHookManager, DefaultContextBuilder,
   DefaultSubagentRunner,
-} from "@algomim/agent-core";
-import type { SubagentConfig } from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import type { SubagentConfig } from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new OpenAIAdapter({
   baseURL: "https://api.openai.com/v1",
@@ -1054,7 +1054,7 @@ Memory lets the agent remember things between conversations. You define **what**
 agent-core provides the `MemoryStore` interface — you implement the backend (Firestore, file system, SQLite, etc.).
 
 ```typescript
-import type { MemoryStore, MemoryEntry, MemorySearchResult } from "@algomim/agent-core";
+import type { MemoryStore, MemoryEntry, MemorySearchResult } from "@awesome-agent/agent-core";
 
 // Step 1: Implement the MemoryStore interface
 // This example uses a simple in-memory Map. In production, use Firestore, SQLite, etc.
@@ -1240,8 +1240,8 @@ const loop = new AgenticLoop({
 agent-core provides `MCPToolBridge` — it discovers tools from MCP servers and converts them to native agent-core tools automatically.
 
 ```typescript
-import type { MCPClient } from "@algomim/agent-core";
-import { MCPToolBridge, DefaultToolRegistry, AgenticLoop } from "@algomim/agent-core";
+import type { MCPClient } from "@awesome-agent/agent-core";
+import { MCPToolBridge, DefaultToolRegistry, AgenticLoop } from "@awesome-agent/agent-core";
 
 // Step 1: Create MCP clients
 // You implement the MCPClient interface per transport (stdio, WebSocket, SSE).
@@ -1343,11 +1343,11 @@ MCP tools can return images (e.g., viewport captures). These are automatically c
 Install an adapter package, then point it at your provider:
 
 ```bash
-npm install @algomim/adapter-openai
+npm install @awesome-agent/adapter-openai
 ```
 
 ```typescript
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 // OpenAI
 const llm = new OpenAIAdapter({
   baseURL: "https://api.openai.com/v1",
@@ -1382,12 +1382,12 @@ const llm = new OpenAIAdapter({
 To add a completely custom provider, implement the `LLMAdapter` interface:
 
 ```typescript
-import type { LLMAdapter, LLMRequest, LLMStream } from "@algomim/agent-core";
+import type { LLMAdapter, LLMRequest, LLMStream } from "@awesome-agent/agent-core";
 
 class MyCustomAdapter implements LLMAdapter {
   async stream(request: LLMRequest): Promise<LLMStream> {
     // Connect to your LLM, return a stream of events
-    // See @algomim/adapter-openai source for a complete example
+    // See @awesome-agent/adapter-openai source for a complete example
   }
 }
 ```

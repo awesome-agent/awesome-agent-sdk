@@ -1,5 +1,5 @@
 {
-  "name": "@algomim/agent-core",
+  "name": "@awesome-agent/agent-core",
   "version": "0.1.0",
   "description": "Agentic loop core library — provider-agnostic, server-independent",
   "type": "module",
@@ -76,10 +76,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/algomim/awesome-agent-sdk.git",
+    "url": "https://github.com/awesome-agent/sdk.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/algomim/awesome-agent-sdk#readme",
+  "homepage": "https://github.com/awesome-agent/sdk#readme",
   "engines": {
     "node": ">=18.0.0"
   },

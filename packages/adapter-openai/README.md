@@ -1,19 +1,19 @@
-# @algomim/adapter-openai
+# @awesome-agent/adapter-openai
 
-OpenAI-compatible LLM adapter for [@algomim/agent-core](../core).
+OpenAI-compatible LLM adapter for [@awesome-agent/agent-core](../core).
 
 Works with **any provider** that speaks the OpenAI chat completions protocol: OpenAI, OpenRouter, Groq, Ollama, Together, and more.
 
 ## Installation
 
 ```bash
-npm install @algomim/agent-core @algomim/adapter-openai
+npm install @awesome-agent/agent-core @awesome-agent/adapter-openai
 ```
 
 ## Usage
 
 ```typescript
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new OpenAIAdapter({
   baseURL: "https://api.openai.com/v1",
@@ -52,8 +52,8 @@ const llm = new OpenAIAdapter({
 Wrap with `RetryLLMAdapter` for automatic retry on 429/500/503:
 
 ```typescript
-import { RetryLLMAdapter } from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+import { RetryLLMAdapter } from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new RetryLLMAdapter(
   new OpenAIAdapter({
@@ -85,8 +85,8 @@ import {
   DefaultToolExecutor,
   DefaultHookManager,
   DefaultContextBuilder,
-} from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new OpenAIAdapter({
   baseURL: "https://openrouter.ai/api/v1",
