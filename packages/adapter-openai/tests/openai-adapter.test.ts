@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { OpenAIAdapter } from "../src/openai-adapter.js";
 import { sseChunk, makeSSEBody } from "./helpers/sse.js";
-import type { LLMRequest, StreamEvent } from "@algomim/agent-core";
+import type { LLMRequest, StreamEvent } from "@awesome-agent/agent-core";
 
 function mockFetchResponse(
   chunks: string[],

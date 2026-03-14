@@ -6,8 +6,8 @@ import type {
   LLMRequest,
   LLMStream,
   LLMToolDefinition,
-} from "@algomim/agent-core";
-import { DefaultLLMStream } from "@algomim/agent-core";
+} from "@awesome-agent/agent-core";
+import { DefaultLLMStream } from "@awesome-agent/agent-core";
 import { OpenAIStreamParser } from "./openai-stream-parser.js";
 
 // ─── Config ──────────────────────────────────────────────────

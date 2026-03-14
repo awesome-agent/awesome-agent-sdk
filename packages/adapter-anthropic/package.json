@@ -1,7 +1,7 @@
 {
-  "name": "@algomim/adapter-anthropic",
+  "name": "@awesome-agent/adapter-anthropic",
   "version": "0.1.0",
-  "description": "Anthropic Claude adapter for @algomim/agent-core",
+  "description": "Anthropic Claude adapter for @awesome-agent/agent-core",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/algomim/awesome-agent-sdk.git",
+    "url": "https://github.com/awesome-agent/sdk.git",
     "directory": "packages/adapter-anthropic"
   },
   "engines": { "node": ">=18.0.0" },
@@ -30,10 +30,10 @@
     "@anthropic-ai/sdk": "^0.39.0"
   },
   "peerDependencies": {
-    "@algomim/agent-core": "*"
+    "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
-    "@algomim/agent-core": "*",
+    "@awesome-agent/agent-core": "*",
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
   }

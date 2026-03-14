@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { OpenAIStreamParser } from "../src/openai-stream-parser.js";
 import { sseChunk, makeSSEBody } from "./helpers/sse.js";
-import type { StreamEvent } from "@algomim/agent-core";
+import type { StreamEvent } from "@awesome-agent/agent-core";
 
 async function collectEvents(
   chunks: string[]

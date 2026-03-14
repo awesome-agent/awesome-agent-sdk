@@ -1,7 +1,7 @@
 // Parses OpenAI-compatible SSE stream chunks into agent-core StreamEvents
 
-import type { StreamEvent, FinishReason } from "@algomim/agent-core";
-import { parseSSEStream } from "@algomim/agent-core";
+import type { StreamEvent, FinishReason } from "@awesome-agent/agent-core";
+import { parseSSEStream } from "@awesome-agent/agent-core";
 
 // ─── OpenAI Wire Format (response) ──────────────────────────
 

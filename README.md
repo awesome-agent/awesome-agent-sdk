@@ -19,16 +19,16 @@ Your prompt ──────────► │  Gather ───► Act ─�
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| [@algomim/agent-core](packages/core) | Agentic loop engine — interfaces, state machine, hooks, tools, skills, memory, MCP | Stable |
-| [@algomim/adapter-openai](packages/adapter-openai) | OpenAI-compatible adapter (OpenAI, OpenRouter, Groq, Ollama, Together) | Stable |
-| @algomim/adapter-anthropic | Claude API adapter | Coming soon |
-| @algomim/adapter-firestore | Firestore memory & chat store | Coming soon |
-| @algomim/adapter-filesystem | File system memory store (local dev) | Coming soon |
+| [@awesome-agent/agent-core](packages/core) | Agentic loop engine — interfaces, state machine, hooks, tools, skills, memory, MCP | Stable |
+| [@awesome-agent/adapter-openai](packages/adapter-openai) | OpenAI-compatible adapter (OpenAI, OpenRouter, Groq, Ollama, Together) | Stable |
+| @awesome-agent/adapter-anthropic | Claude API adapter | Coming soon |
+| @awesome-agent/adapter-firestore | Firestore memory & chat store | Coming soon |
+| @awesome-agent/adapter-filesystem | File system memory store (local dev) | Coming soon |
 
 ## Quick Start
 
 ```bash
-npm install @algomim/agent-core @algomim/adapter-openai
+npm install @awesome-agent/agent-core @awesome-agent/adapter-openai
 ```
 
 ```typescript
@@ -38,8 +38,8 @@ import {
   DefaultToolExecutor,
   DefaultHookManager,
   DefaultContextBuilder,
-} from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 // 1. Connect to any OpenAI-compatible provider
 const llm = new OpenAIAdapter({
@@ -84,10 +84,10 @@ console.log(result.output);
 ┌─────────────────────────────────────────────┐
 │  Your Application                           │
 ├─────────────────────────────────────────────┤
-│  Adapters (@algomim/adapter-*)              │
+│  Adapters (@awesome-agent/adapter-*)              │
 │  OpenAI, Anthropic, Firestore, FileSystem   │
 ├─────────────────────────────────────────────┤
-│  @algomim/agent-core                        │
+│  @awesome-agent/agent-core                        │
 │  Loop, Tools, Hooks, Context, Skills,       │
 │  Memory, MCP, State Machine                 │
 └─────────────────────────────────────────────┘
@@ -107,8 +107,8 @@ import { execSync } from "child_process";
 import {
   AgenticLoop, DefaultToolRegistry, DefaultToolExecutor,
   DefaultHookManager, DefaultContextBuilder,
-} from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new OpenAIAdapter({
   baseURL: "https://openrouter.ai/api/v1",
@@ -178,7 +178,7 @@ console.log(result.toolCalls);
 Use hooks to enforce safety rules. This blocks any tool call to `delete_file`:
 
 ```typescript
-import { DefaultHookManager, HookEvent } from "@algomim/agent-core";
+import { DefaultHookManager, HookEvent } from "@awesome-agent/agent-core";
 
 const hooks = new DefaultHookManager();
 
@@ -202,8 +202,8 @@ const loop = new AgenticLoop({ llm, agent, tools, executor, hooks, context });
 Wrap any LLM adapter with automatic retry on transient errors:
 
 ```typescript
-import { RetryLLMAdapter } from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+import { RetryLLMAdapter } from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 const llm = new RetryLLMAdapter(
   new OpenAIAdapter({
@@ -279,7 +279,7 @@ Automatically inject relevant prompts based on user input:
 ```typescript
 import {
   DefaultSkillRegistry, DefaultSkillDetector,
-} from "@algomim/agent-core";
+} from "@awesome-agent/agent-core";
 
 const skills = new DefaultSkillRegistry();
 skills.register({
@@ -313,8 +313,8 @@ await loop.run("Write a SQL query to find top 10 customers", "s1");
 Discover and use tools from Model Context Protocol servers:
 
 ```typescript
-import { AgenticLoop } from "@algomim/agent-core";
-import type { MCPClient } from "@algomim/agent-core";
+import { AgenticLoop } from "@awesome-agent/agent-core";
+import type { MCPClient } from "@awesome-agent/agent-core";
 
 // Your MCP client implementation
 const revitClient: MCPClient = {
@@ -343,7 +343,7 @@ const loop = new AgenticLoop({
 Token counting that learns from real LLM usage:
 
 ```typescript
-import { AdaptiveEstimator, DefaultPruner } from "@algomim/agent-core";
+import { AdaptiveEstimator, DefaultPruner } from "@awesome-agent/agent-core";
 
 const estimator = new AdaptiveEstimator({
   initialCharsPerToken: 4,  // Start with rough estimate
@@ -374,8 +374,8 @@ import {
   DefaultSkillRegistry, DefaultSkillDetector,
   RetryLLMAdapter, AdaptiveEstimator, DefaultPruner,
   StreamingCompactor, HookEvent,
-} from "@algomim/agent-core";
-import { OpenAIAdapter } from "@algomim/adapter-openai";
+} from "@awesome-agent/agent-core";
+import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
 
 // LLM with retry
 const llm = new RetryLLMAdapter(
