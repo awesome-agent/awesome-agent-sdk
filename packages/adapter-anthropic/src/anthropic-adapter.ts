@@ -48,6 +48,7 @@ type AnthropicContent =
 const DEFAULT_BASE_URL = "https://api.anthropic.com";
 const MESSAGES_PATH = "/v1/messages";
 const DEFAULT_API_VERSION = "2023-06-01";
+const DEFAULT_ANTHROPIC_MAX_TOKENS = 4096;
 
 // ─── Adapter ─────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ export class AnthropicAdapter implements LLMAdapter {
       model: request.model,
       messages,
       stream: true,
-      max_tokens: request.maxTokens ?? 4096,
+      max_tokens: request.maxTokens ?? DEFAULT_ANTHROPIC_MAX_TOKENS,
     };
 
     // Anthropic: system is a top-level parameter, not a message

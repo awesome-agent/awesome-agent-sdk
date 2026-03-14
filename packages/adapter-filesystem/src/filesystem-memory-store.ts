@@ -3,9 +3,9 @@
 
 import { readdir, readFile, writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
 import {
-  scoreRelevance,
+  generateMemoryId,
+  searchMemories,
 } from "@awesome-agent/agent-core";
 import type {
   MemoryStore,
@@ -27,8 +27,6 @@ export interface FileSystemMemoryStoreConfig {
 // ─── Constants ───────────────────────────────────────────────
 
 const DEFAULT_EXTENSION = ".json";
-const DEFAULT_MAX_RESULTS = 50;
-const DEFAULT_THRESHOLD = 0;
 
 // ─── Implementation ─────────────────────────────────────────
 
@@ -50,7 +48,7 @@ export class FileSystemMemoryStore implements MemoryStore {
     const now = Date.now();
     const full: MemoryEntry = {
       ...entry,
-      id: randomUUID().slice(0, 16),
+      id: generateMemoryId(),
       createdAt: now,
       updatedAt: now,
     };
@@ -64,20 +62,7 @@ export class FileSystemMemoryStore implements MemoryStore {
     options?: MemorySearchOptions
   ): Promise<readonly MemorySearchResult[]> {
     const entries = await this.getAll(options);
-    const maxResults = options?.maxResults ?? DEFAULT_MAX_RESULTS;
-    const threshold = options?.threshold ?? DEFAULT_THRESHOLD;
-    const lowerQuery = query.toLowerCase();
-
-    const results: MemorySearchResult[] = entries
-      .map((entry) => ({
-        entry,
-        relevance: scoreRelevance(entry, lowerQuery),
-      }))
-      .filter((r) => r.relevance > threshold)
-      .sort((a, b) => b.relevance - a.relevance)
-      .slice(0, maxResults);
-
-    return results;
+    return searchMemories(entries, query, options);
   }
 
   async delete(id: string): Promise<void> {

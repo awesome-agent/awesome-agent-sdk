@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DefaultHookManager } from "../../src/hook/manager.js";
 import { HookEvent } from "../../src/hook/types.js";
 import type { Hook, HookResult } from "../../src/hook/types.js";
+import { DuplicateRegistrationError } from "../../src/errors.js";
 
 function makeHook(
   name: string,
@@ -31,7 +32,7 @@ describe("DefaultHookManager", () => {
     }));
 
     mgr.register(hook);
-    expect(() => mgr.register(hook)).toThrow('Hook "h1" is already registered');
+    expect(() => mgr.register(hook)).toThrow(DuplicateRegistrationError);
   });
 
   it("unregisters hooks", () => {
