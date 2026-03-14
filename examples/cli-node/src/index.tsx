@@ -1,19 +1,22 @@
 // awesome-agent CLI — Ink-based terminal UI
-// Fixed input at bottom, scrolling output above
+// Static logs scroll up, input bar stays at bottom
 
 import React, { useState, useCallback } from "react";
-import { render, Box, Text, useApp, useInput } from "ink";
+import { render, Box, Text, Static, useApp, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { sendMessage, queueMessage, clearHistory, model } from "./agent.js";
-import type { LoopEvent, LoopResult } from "@awesome-agent/agent-core";
+import type { LoopEvent } from "@awesome-agent/agent-core";
 
 // ─── Types ───────────────────────────────────────────────────
 
 interface LogEntry {
-  type: "user" | "text" | "tool-start" | "tool-done" | "tool-fail" | "stats" | "queued" | "separator";
+  id: number;
+  type: "user" | "text" | "tool-start" | "tool-done" | "tool-fail" | "stats" | "queued" | "info";
   content: string;
   detail?: string;
 }
+
+let nextId = 0;
 
 // ─── App ─────────────────────────────────────────────────────
 
@@ -23,33 +26,36 @@ function App() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [streaming, setStreaming] = useState("");
+  const [status, setStatus] = useState("");
 
-  const addLog = useCallback((entry: LogEntry) => {
-    setLogs((prev) => [...prev, entry]);
+  const addLog = useCallback((type: LogEntry["type"], content: string, detail?: string) => {
+    setLogs((prev) => [...prev, { id: nextId++, type, content, detail }]);
   }, []);
 
-  const handleSubmit = useCallback(async (text: string) => {
+  const handleSubmit = useCallback(async (value: string) => {
+    const text = value.trim();
     setInput("");
-    if (!text.trim()) return;
+    if (!text) return;
 
-    if (text.trim() === "/exit") return exit();
-    if (text.trim() === "/clear") {
+    if (text === "/exit") return exit();
+    if (text === "/clear") {
       clearHistory();
       setLogs([]);
       setStreaming("");
+      setStatus("");
       return;
     }
 
-    // Queue if agent is busy
     if (busy) {
-      queueMessage(text.trim());
-      addLog({ type: "queued", content: text.trim() });
+      queueMessage(text);
+      addLog("queued", text);
       return;
     }
 
-    addLog({ type: "user", content: text.trim() });
+    addLog("user", text);
     setBusy(true);
     setStreaming("");
+    setStatus("Thinking…");
 
     let streamText = "";
     const startTime = Date.now();
@@ -59,144 +65,143 @@ function App() {
         case "text:delta":
           streamText += event.text;
           setStreaming(streamText);
+          setStatus("");
           break;
         case "tool:start": {
-          // Flush streaming text
           if (streamText) {
-            const flushed = streamText;
+            addLog("text", streamText);
             streamText = "";
             setStreaming("");
-            addLog({ type: "text", content: flushed });
           }
           const args = Object.entries(event.args)
             .map(([k, v]) => `${k}=${typeof v === "string" && v.length > 30 ? v.slice(0, 30) + "…" : v}`)
             .join(", ");
-          addLog({ type: "tool-start", content: event.name, detail: args });
+          addLog("tool-start", event.name, args);
+          setStatus(`Running ${event.name}…`);
           break;
         }
         case "tool:end": {
           const preview = event.result.content.split("\n")[0].slice(0, 50);
           if (event.result.success) {
-            addLog({ type: "tool-done", content: "Done", detail: preview });
+            addLog("tool-done", "Done", preview);
           } else {
-            addLog({ type: "tool-fail", content: "Failed", detail: preview });
+            addLog("tool-fail", "Failed", preview);
           }
+          setStatus("Thinking…");
           break;
         }
       }
     };
 
     try {
-      const result = await sendMessage(text.trim(), onEvent);
+      const result = await sendMessage(text, onEvent);
 
-      // Flush final streaming text
       if (streamText) {
-        addLog({ type: "text", content: streamText });
+        addLog("text", streamText);
         setStreaming("");
       }
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const { input: ti, output: to } = result.totalTokens;
-      addLog({
-        type: "stats",
-        content: `${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ↑${ti} ↓${to} · ${ti + to} tokens · ${elapsed}s`,
-      });
-      // No separator between messages — only the fixed one above input bar
+      addLog("stats", `${result.iterations} iter · ↑${ti} ↓${to} · ${ti + to} tokens · ${elapsed}s`);
     } catch (err) {
-      addLog({ type: "tool-fail", content: "Error", detail: err instanceof Error ? err.message : String(err) });
+      addLog("tool-fail", "Error", err instanceof Error ? err.message : String(err));
     }
 
     setBusy(false);
+    setStatus("");
   }, [busy, addLog, exit]);
 
-  // ESC to exit
   useInput((_, key) => {
     if (key.escape) exit();
   });
 
   return (
-    <Box flexDirection="column" height={process.stdout.rows || 24}>
-      {/* Header */}
-      <Box paddingX={1}>
-        <Text bold color="cyan">awesome-agent</Text>
-        <Text color="gray"> ({model}) · /clear · /exit · ESC</Text>
-      </Box>
-      <Box paddingX={1}>
-        <Text color="gray">{"─".repeat((process.stdout.columns || 80) - 2)}</Text>
-      </Box>
+    <>
+      {/* Static area — completed logs, scrolls up naturally */}
+      <Static items={logs}>
+        {(log) => <LogLine key={log.id} entry={log} />}
+      </Static>
 
-      {/* Output area — grows to fill */}
-      <Box flexDirection="column" flexGrow={1} paddingX={1} overflowY="hidden">
-        {logs.map((log, i) => (
-          <LogLine key={i} entry={log} />
-        ))}
-        {streaming && (
-          <Text>{streaming}</Text>
-        )}
-        {busy && !streaming && logs[logs.length - 1]?.type !== "tool-start" && (
-          <Text color="gray">Thinking…</Text>
-        )}
-      </Box>
+      {/* Live area — stays at bottom */}
+      <Box flexDirection="column" marginTop={1}>
+        {streaming && <Text wrap="wrap">{streaming}</Text>}
+        {status && <Text color="gray">{status}</Text>}
 
-      {/* Separator */}
-      <Box paddingX={1}>
-        <Text color="gray">{"─".repeat((process.stdout.columns || 80) - 2)}</Text>
-      </Box>
+        <Box>
+          <Text color="gray">{"─".repeat(Math.min(process.stdout.columns || 80, 120))}</Text>
+        </Box>
 
-      {/* Fixed input bar */}
-      <Box paddingX={1}>
-        <Text bold color="green">❯ </Text>
-        <TextInput
-          value={input}
-          onChange={setInput}
-          onSubmit={handleSubmit}
-          placeholder={busy ? "type to queue a message…" : "type a message…"}
-        />
+        <Box>
+          <Text bold color="green">❯ </Text>
+          <TextInput
+            value={input}
+            onChange={setInput}
+            onSubmit={handleSubmit}
+            placeholder={busy ? "type to queue…" : "message…"}
+          />
+          {busy && <Text color="gray"> (working)</Text>}
+        </Box>
       </Box>
-    </Box>
+    </>
   );
 }
 
-// ─── Log Line Component ──────────────────────────────────────
+// ─── Log Line ────────────────────────────────────────────────
 
 function LogLine({ entry }: { entry: LogEntry }) {
   switch (entry.type) {
     case "user":
-      return <Text><Text bold color="green">You:</Text> {entry.content}</Text>;
+      return (
+        <Box marginTop={1}>
+          <Text><Text bold color="green">You:</Text> {entry.content}</Text>
+        </Box>
+      );
     case "text":
-      return <Text>{entry.content}</Text>;
+      return <Text wrap="wrap">{entry.content}</Text>;
     case "tool-start":
       return (
         <Text>
-          {"  "}<Text color="green">●</Text> <Text bold>{entry.content}</Text>
+          {"  "}<Text color="green">●</Text>{" "}
+          <Text bold>{entry.content}</Text>
           <Text color="gray">({entry.detail})</Text>
         </Text>
       );
     case "tool-done":
       return (
         <Text>
-          {"  "}<Text color="gray">└</Text> <Text color="green">{entry.content}</Text>
+          {"  "}<Text color="gray">└</Text>{" "}
+          <Text color="green">{entry.content}</Text>
           {entry.detail ? <Text color="gray"> ({entry.detail})</Text> : null}
         </Text>
       );
     case "tool-fail":
       return (
         <Text>
-          {"  "}<Text color="gray">└</Text> <Text color="red">{entry.content}</Text>
+          {"  "}<Text color="gray">└</Text>{" "}
+          <Text color="red">{entry.content}</Text>
           {entry.detail ? <Text color="gray"> ({entry.detail})</Text> : null}
         </Text>
       );
     case "stats":
-      return <Text color="gray">  {entry.content}</Text>;
+      return (
+        <Box marginBottom={1}>
+          <Text color="gray">  {entry.content}</Text>
+        </Box>
+      );
     case "queued":
       return <Text color="yellow">  ↳ queued: "{entry.content}"</Text>;
-    case "separator":
-      return <Text color="gray">{"─".repeat((process.stdout.columns || 80) - 2)}</Text>;
+    case "info":
+      return <Text color="gray">  {entry.content}</Text>;
     default:
       return null;
   }
 }
 
 // ─── Render ──────────────────────────────────────────────────
+
+console.clear();
+console.log(`  \x1b[1m\x1b[36mawesome-agent\x1b[0m \x1b[90m(${model})\x1b[0m`);
+console.log(`  \x1b[90m/clear · /exit · ESC · type while agent works\x1b[0m\n`);
 
 render(<App />);
