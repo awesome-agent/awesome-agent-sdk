@@ -21,7 +21,7 @@ Your prompt ──────────► │  Gather ───► Act ─�
 |---------|-------------|--------|
 | [@awesome-agent/agent-core](packages/core) | Agentic loop engine — interfaces, state machine, hooks, tools, skills, memory, MCP | Stable |
 | [@awesome-agent/adapter-openai](packages/adapter-openai) | OpenAI-compatible adapter (OpenAI, OpenRouter, Groq, Ollama, Together) | Stable |
-| @awesome-agent/adapter-anthropic | Claude API adapter | Coming soon |
+| [@awesome-agent/adapter-anthropic](packages/adapter-anthropic) | Anthropic Claude adapter (native Messages API) | Stable |
 | [@awesome-agent/adapter-postgres](packages/adapter-postgres) | PostgreSQL memory store (production) | Stable |
 | [@awesome-agent/adapter-filesystem](packages/adapter-filesystem) | File system memory store (local dev, CLI, debugging) | Stable |
 
