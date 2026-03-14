@@ -5,13 +5,15 @@ import type { Message, LLMAdapter } from "../llm/types.js";
 import type { Compactor } from "./types.js";
 import { buildTranscript } from "./transcript.js";
 import { streamSummary } from "./summarize.js";
+import {
+  DEFAULT_COMPACTOR_PRESERVE_LAST_N,
+  DEFAULT_COMPACTOR_MAX_SUMMARY_TOKENS,
+  DEFAULT_COMPACTOR_TEMPERATURE,
+} from "./compactor-defaults.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
-const DEFAULT_PRESERVE_LAST_N = 6;
-const DEFAULT_MAX_SUMMARY_TOKENS = 1024;
 const DEFAULT_COMPACT_THRESHOLD = 10;
-const DEFAULT_SUMMARY_TEMPERATURE = 0.3;
 
 export interface StreamingCompactorConfig {
   readonly model?: string;
@@ -36,7 +38,7 @@ export class StreamingCompactor implements Compactor {
     messages: readonly Message[],
     focusHint?: string
   ): Promise<Message[]> {
-    const preserveN = this.config?.preserveLastN ?? DEFAULT_PRESERVE_LAST_N;
+    const preserveN = this.config?.preserveLastN ?? DEFAULT_COMPACTOR_PRESERVE_LAST_N;
     const threshold = this.config?.compactThreshold ?? DEFAULT_COMPACT_THRESHOLD;
 
     if (messages.length <= preserveN) {
@@ -107,8 +109,8 @@ export class StreamingCompactor implements Compactor {
         "You are a conversation summarizer. Produce concise, factual summaries. " +
         "When given an existing summary and new conversation, merge them into one updated summary.",
       userPrompt,
-      temperature: this.config?.temperature ?? DEFAULT_SUMMARY_TEMPERATURE,
-      maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
+      temperature: this.config?.temperature ?? DEFAULT_COMPACTOR_TEMPERATURE,
+      maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_COMPACTOR_MAX_SUMMARY_TOKENS,
     });
   }
 }

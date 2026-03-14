@@ -6,7 +6,7 @@ import { ConfigError } from "../errors.js";
 
 // ─── Builder ─────────────────────────────────────────────────
 
-const DEFAULTS = {
+export const AGENT_DEFAULTS = {
   temperature: 0.7,
   maxIterations: 50,
 } as const;
@@ -76,8 +76,8 @@ export class AgentConfigBuilder {
       name: this.partial.name,
       prompt: this.partial.prompt,
       model: this.partial.model,
-      temperature: this.partial.temperature ?? DEFAULTS.temperature,
-      maxIterations: this.partial.maxIterations ?? DEFAULTS.maxIterations,
+      temperature: this.partial.temperature ?? AGENT_DEFAULTS.temperature,
+      maxIterations: this.partial.maxIterations ?? AGENT_DEFAULTS.maxIterations,
       maxSteps: this.partial.maxSteps,
       tools: this.partial.tools,
       skills: this.partial.skills,
