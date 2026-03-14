@@ -118,7 +118,12 @@ const loop = new AgenticLoop({
   agent: {
     id: "cli-agent",
     name: "CLI Agent",
-    prompt: "You are a helpful terminal assistant. You can read/write files, list directories, and run commands. Be concise.",
+    prompt:
+      "You are a helpful terminal assistant. You can read/write files, " +
+      "list directories, and run commands. Be concise.\n\n" +
+      "IMPORTANT: Call only ONE tool at a time. After each tool call, " +
+      "briefly explain what you did and what you'll do next before calling " +
+      "the next tool. This helps the user follow your progress.",
     model,
     maxIterations: 15,
   },
