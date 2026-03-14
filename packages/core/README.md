@@ -6,7 +6,7 @@ Zero runtime dependencies. Provider-agnostic — bring your own LLM adapter.
 
 Part of the [awesome-agent-sdk](https://github.com/algomim/awesome-agent-sdk) monorepo.
 
-Inspired by [Claude Code](https://docs.anthropic.com/en/docs/claude-code)'s architecture.
+Built on the standard agentic loop pattern — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture.
 
 ## What Does It Do?
 
