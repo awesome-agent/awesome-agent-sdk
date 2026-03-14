@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DefaultSkillRegistry } from "../../src/skill/registry.js";
 import type { Skill } from "../../src/skill/types.js";
+import { DuplicateRegistrationError } from "../../src/errors.js";
 
 function makeSkill(name: string, keywords: string[] = []): Skill {
   return {
@@ -28,7 +29,7 @@ describe("DefaultSkillRegistry", () => {
     const reg = new DefaultSkillRegistry();
     reg.register(makeSkill("revit"));
     expect(() => reg.register(makeSkill("revit"))).toThrow(
-      'Skill "revit" is already registered'
+      DuplicateRegistrationError
     );
   });
 

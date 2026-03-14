@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { AgentConfigBuilder } from "../../src/agent/config.js";
+import { ConfigError } from "../../src/errors.js";
 
 describe("AgentConfigBuilder", () => {
   it("builds config with required fields", () => {
@@ -60,19 +61,19 @@ describe("AgentConfigBuilder", () => {
   it("throws when id missing", () => {
     expect(() =>
       new AgentConfigBuilder().name("A").prompt("P").build()
-    ).toThrow("AgentConfig requires id");
+    ).toThrow(ConfigError);
   });
 
   it("throws when name missing", () => {
     expect(() =>
       new AgentConfigBuilder().id("a1").prompt("P").build()
-    ).toThrow("AgentConfig requires name");
+    ).toThrow(ConfigError);
   });
 
   it("throws when prompt missing", () => {
     expect(() =>
       new AgentConfigBuilder().id("a1").name("A").build()
-    ).toThrow("AgentConfig requires prompt");
+    ).toThrow(ConfigError);
   });
 
   it("fluent API returns this", () => {

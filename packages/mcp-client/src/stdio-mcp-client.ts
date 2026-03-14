@@ -38,6 +38,7 @@ export interface StdioMCPClientConfig {
 // ─── Constants ───────────────────────────────────────────────
 
 const DEFAULT_TIMEOUT = 30_000;
+const CLIENT_VERSION = "0.1.0";
 
 // ─── Implementation ─────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export class StdioMCPClient implements MCPClient {
     await this.request("initialize", {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: this.name, version: "0.1.0" },
+      clientInfo: { name: this.name, version: CLIENT_VERSION },
     });
 
     await this.notify("notifications/initialized");
@@ -123,13 +124,17 @@ export class StdioMCPClient implements MCPClient {
 
   // ─── Private Helpers ──────────────────────────────────────
 
+  private ensureConnected(): void {
+    if (!this.process?.stdin) {
+      throw new MCPConnectionError();
+    }
+  }
+
   private async request(
     method: string,
     params?: Record<string, unknown>
   ): Promise<unknown> {
-    if (!this.process?.stdin) {
-      throw new MCPConnectionError();
-    }
+    this.ensureConnected();
 
     const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
 
@@ -147,11 +152,9 @@ export class StdioMCPClient implements MCPClient {
   }
 
   private async notify(method: string): Promise<void> {
-    if (!this.process?.stdin) {
-      throw new MCPConnectionError();
-    }
+    this.ensureConnected();
 
     const msg: MCPMessage = { jsonrpc: "2.0", method };
-    this.process.stdin.write(JSON.stringify(msg) + "\n");
+    this.process!.stdin!.write(JSON.stringify(msg) + "\n");
   }
 }

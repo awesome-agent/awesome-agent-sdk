@@ -1,9 +1,10 @@
 // PostgreSQL memory store — production-ready, works with any Postgres-compatible DB
 // Uses pg (node-postgres) — the most widely used Postgres client for Node.js
 
-import { randomUUID } from "node:crypto";
 import {
-  scoreRelevance,
+  AgentError,
+  generateMemoryId,
+  searchMemories,
 } from "@awesome-agent/agent-core";
 import type {
   MemoryStore,
@@ -41,14 +42,13 @@ export interface PostgresMemoryStoreConfig {
 
 const DEFAULT_TABLE = "memories";
 const DEFAULT_SCHEMA = "public";
-const DEFAULT_MAX_RESULTS = 50;
-const DEFAULT_THRESHOLD = 0;
 
 // ─── Implementation ─────────────────────────────────────────
 
 export class PostgresMemoryStore implements MemoryStore {
   private readonly client: PgClient;
   private readonly table: string;
+  private readonly rawTableName: string;
   private readonly autoMigrate: boolean;
   private migrated = false;
 
@@ -56,6 +56,7 @@ export class PostgresMemoryStore implements MemoryStore {
     this.client = config.client;
     const schema = config.schema ?? DEFAULT_SCHEMA;
     const table = config.tableName ?? DEFAULT_TABLE;
+    this.rawTableName = table;
     this.table = `"${schema}"."${table}"`;
     this.autoMigrate = config.autoMigrate ?? true;
   }
@@ -66,21 +67,27 @@ export class PostgresMemoryStore implements MemoryStore {
     await this.ensureTable();
 
     const now = Date.now();
-    const id = this.generateId();
+    const id = generateMemoryId();
 
-    await this.client.query(
-      `INSERT INTO ${this.table} (id, type, name, content, metadata, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        id,
-        entry.type,
-        entry.name,
-        entry.content,
-        entry.metadata ? JSON.stringify(entry.metadata) : null,
-        now,
-        now,
-      ]
-    );
+    try {
+      await this.client.query(
+        `INSERT INTO ${this.table} (id, type, name, content, metadata, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          id,
+          entry.type,
+          entry.name,
+          entry.content,
+          entry.metadata ? JSON.stringify(entry.metadata) : null,
+          now,
+          now,
+        ]
+      );
+    } catch (err) {
+      throw new AgentError(
+        `Failed to save memory entry: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
 
     return { ...entry, id, createdAt: now, updatedAt: now };
   }
@@ -90,23 +97,19 @@ export class PostgresMemoryStore implements MemoryStore {
     options?: MemorySearchOptions
   ): Promise<readonly MemorySearchResult[]> {
     const entries = await this.getAll(options);
-    const maxResults = options?.maxResults ?? DEFAULT_MAX_RESULTS;
-    const threshold = options?.threshold ?? DEFAULT_THRESHOLD;
-    const lowerQuery = query.toLowerCase();
-
-    return entries
-      .map((entry) => ({
-        entry,
-        relevance: scoreRelevance(entry, lowerQuery),
-      }))
-      .filter((r) => r.relevance > threshold)
-      .sort((a, b) => b.relevance - a.relevance)
-      .slice(0, maxResults);
+    return searchMemories(entries, query, options);
   }
 
   async delete(id: string): Promise<void> {
     await this.ensureTable();
-    await this.client.query(`DELETE FROM ${this.table} WHERE id = $1`, [id]);
+
+    try {
+      await this.client.query(`DELETE FROM ${this.table} WHERE id = $1`, [id]);
+    } catch (err) {
+      throw new AgentError(
+        `Failed to delete memory entry "${id}": ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   async getAll(filter?: MemoryFilter): Promise<readonly MemoryEntry[]> {
@@ -122,18 +125,34 @@ export class PostgresMemoryStore implements MemoryStore {
 
     sql += ` ORDER BY created_at DESC`;
 
-    const result = await this.client.query(sql, values);
-
-    return result.rows.map((row) => this.fromRow(row));
+    try {
+      const result = await this.client.query(sql, values);
+      return result.rows.map((row) => this.fromRow(row));
+    } catch (err) {
+      throw new AgentError(
+        `Failed to query memory entries: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   // ─── Private Helpers ──────────────────────────────────────
 
-  private generateId(): string {
-    return randomUUID().slice(0, 16);
-  }
-
   private fromRow(row: Record<string, unknown>): MemoryEntry {
+    let metadata: Record<string, unknown> | undefined;
+
+    if (row.metadata) {
+      if (typeof row.metadata === "string") {
+        try {
+          metadata = JSON.parse(row.metadata);
+        } catch {
+          // Corrupt JSON in metadata column — fall back to empty object
+          metadata = {};
+        }
+      } else {
+        metadata = row.metadata as Record<string, unknown>;
+      }
+    }
+
     return {
       id: row.id as string,
       type: row.type as MemoryType,
@@ -141,14 +160,7 @@ export class PostgresMemoryStore implements MemoryStore {
       content: row.content as string,
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number,
-      ...(row.metadata
-        ? {
-            metadata:
-              typeof row.metadata === "string"
-                ? JSON.parse(row.metadata)
-                : (row.metadata as Record<string, unknown>),
-          }
-        : {}),
+      ...(metadata ? { metadata } : {}),
     };
   }
 
@@ -168,8 +180,9 @@ export class PostgresMemoryStore implements MemoryStore {
       )
     `);
 
-    // Index for type filtering
-    const indexName = `idx_${DEFAULT_TABLE}_type`;
+    // Index for type filtering — use configured table name, not the default
+    const sanitizedTable = this.rawTableName.replace(/[^a-zA-Z0-9_]/g, "_");
+    const indexName = `idx_${sanitizedTable}_type`;
     await this.client.query(`
       CREATE INDEX IF NOT EXISTS ${indexName} ON ${this.table} (type)
     `);
