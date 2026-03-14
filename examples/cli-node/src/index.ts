@@ -160,6 +160,16 @@ function ask() {
   rl.prompt();
 }
 
+function pausePrompt() {
+  // Hide prompt while agent is working — prevent it mixing with output
+  rl.pause();
+}
+
+function resumePrompt() {
+  rl.resume();
+  ask();
+}
+
 rl.on("line", async (input) => {
   const text = input.trim();
   if (!text) return ask();
@@ -176,15 +186,16 @@ rl.on("line", async (input) => {
     return ask();
   }
 
-  // Agent is busy — queue the message
+  // Agent is busy — queue the message silently
   if (agentRunning) {
     pendingMessages.push(text);
-    console.log(`  ${c.gray}(queued: "${text}")${c.reset}`);
-    return ask();
+    console.log(`\n  ${c.yellow}↳ queued:${c.reset} ${c.gray}"${text}" — will inject on next LLM call${c.reset}\n`);
+    return;
   }
 
+  pausePrompt();
   await runAgent(text);
-  ask();
+  resumePrompt();
 });
 
 // ─── Agent Runner ────────────────────────────────────────────
