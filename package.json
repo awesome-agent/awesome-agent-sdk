@@ -2,6 +2,8 @@
   "name": "awesome-agent-sdk",
   "private": true,
   "description": "Agentic AI SDK — core engine + provider adapters",
+  "author": "Kaan Bingol <kaanbingol@outlook.com>",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "turbo build",
     "test": "turbo test",

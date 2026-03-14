@@ -117,4 +117,4 @@ console.log(result.output);
 
 ## License
 
-MIT
+Apache-2.0
