@@ -464,4 +464,6 @@ npm test -w packages/adapter-openai
 
 ## License
 
-MIT
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
+
+Attribution is required when using or redistributing this software.
