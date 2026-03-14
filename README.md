@@ -4,9 +4,11 @@ A modular TypeScript SDK for building AI agents that think, use tools, and loop 
 
 Built on the standard **agentic loop** pattern (gather context → take action → verify results → repeat). Extensible by design — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture. Zero lock-in — bring your own LLM, storage, and tools.
 
-<p align="center">
-  <img src="docs/agentic-loop.svg" alt="Agentic Loop" width="720" />
-</p>
+```
+Your prompt → [ Gather context → Take action → Verify results ] → Done
+                      ↑                              │
+                      └──────── loop back ────────────┘
+```
 
 ## Packages
 
