@@ -15,11 +15,15 @@ export class DefaultSubagentRunner implements SubagentRunner {
 
     // Link parent abort signal
     if (config.abort) {
-      config.abort.addEventListener(
-        "abort",
-        () => controller.abort(),
-        { once: true }
-      );
+      if (config.abort.aborted) {
+        controller.abort();
+      } else {
+        config.abort.addEventListener(
+          "abort",
+          () => controller.abort(),
+          { once: true }
+        );
+      }
     }
 
     // Timeout

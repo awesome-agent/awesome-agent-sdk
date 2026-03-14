@@ -126,9 +126,17 @@ export class AgenticLoop implements RunnableLoop {
 
       // ── Plan Mode ──────────────────────────────────
       if (this.config.planMode && !this.config.approvedPlan) {
-        return await this.runPlanMode(
+        const result = await this.runPlanMode(
           state, messages, emit, systemPrompt, sessionId
         );
+        // Ensure SessionEnd + done event fire (same as normal path)
+        this.emit({ type: "done", result });
+        await hooks.dispatch(
+          HookEvent.SessionEnd,
+          { reason: result.finishReason },
+          sessionId
+        );
+        return result;
       }
 
       // ── Main Loop ─────────────────────────────────
