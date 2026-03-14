@@ -2,7 +2,7 @@
   "name": "@awesome-agent/example-cli-node",
   "version": "0.1.0",
   "private": true,
-  "description": "Simple terminal AI agent — Node.js, zero extra dependencies",
+  "description": "Terminal AI agent with Ink UI — fixed input, scrolling output",
   "type": "module",
   "scripts": {
     "start": "node --env-file=.env dist/index.js",
@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@awesome-agent/agent-core": "*",
-    "@awesome-agent/adapter-openai": "*"
+    "@awesome-agent/adapter-openai": "*",
+    "ink": "^5.2.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.3.0"
   },
   "devDependencies": {
+    "@types/react": "^18.3.0",
     "typescript": "^5.7.0"
   }
 }
