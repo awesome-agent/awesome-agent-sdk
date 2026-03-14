@@ -11,7 +11,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -26,17 +28,19 @@
     "url": "https://github.com/awesome-agent/awesome-agent-sdk.git",
     "directory": "packages/adapter-anthropic"
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "sideEffects": false,
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0"
+    "@anthropic-ai/sdk": "^0.78.0"
   },
   "peerDependencies": {
     "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
-    "@awesome-agent/agent-core": "*",
-    "typescript": "^5.7.0",
+    "@awesome-agent/agent-core": "^0.1.0",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   }
 }
