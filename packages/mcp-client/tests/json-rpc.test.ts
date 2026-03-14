@@ -97,7 +97,8 @@ describe("JsonRpcClient", () => {
     expect(sent).toHaveLength(1);
   });
 
-  it("clear() rejects all pending requests", async () => {
+  it("clear() rejects all pending requests with MCPConnectionError", async () => {
+    const { MCPConnectionError } = await import("@awesome-agent/agent-core");
     const client = new JsonRpcClient();
 
     const p1 = client.waitForResponse(1);
@@ -105,7 +106,7 @@ describe("JsonRpcClient", () => {
 
     client.clear();
 
-    await expect(p1).rejects.toThrow("Connection closed");
-    await expect(p2).rejects.toThrow("Connection closed");
+    await expect(p1).rejects.toBeInstanceOf(MCPConnectionError);
+    await expect(p2).rejects.toBeInstanceOf(MCPConnectionError);
   });
 });

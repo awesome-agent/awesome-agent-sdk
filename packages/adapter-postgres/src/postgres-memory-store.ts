@@ -1,6 +1,10 @@
 // PostgreSQL memory store — production-ready, works with any Postgres-compatible DB
 // Uses pg (node-postgres) — the most widely used Postgres client for Node.js
 
+import { randomUUID } from "node:crypto";
+import {
+  scoreRelevance,
+} from "@awesome-agent/agent-core";
 import type {
   MemoryStore,
   MemoryEntry,
@@ -93,7 +97,7 @@ export class PostgresMemoryStore implements MemoryStore {
     return entries
       .map((entry) => ({
         entry,
-        relevance: this.scoreRelevance(entry, lowerQuery),
+        relevance: scoreRelevance(entry, lowerQuery),
       }))
       .filter((r) => r.relevance > threshold)
       .sort((a, b) => b.relevance - a.relevance)
@@ -126,34 +130,7 @@ export class PostgresMemoryStore implements MemoryStore {
   // ─── Private Helpers ──────────────────────────────────────
 
   private generateId(): string {
-    const bytes = new Uint8Array(8);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  }
-
-  private scoreRelevance(entry: MemoryEntry, lowerQuery: string): number {
-    if (!lowerQuery) return 0.5;
-
-    const content = entry.content.toLowerCase();
-    const name = entry.name.toLowerCase();
-
-    if (name === lowerQuery) return 1.0;
-    if (name.includes(lowerQuery)) return 0.9;
-
-    if (content.includes(lowerQuery)) {
-      const density = lowerQuery.length / content.length;
-      return Math.min(0.85, 0.5 + density * 5);
-    }
-
-    const queryWords = lowerQuery.split(/\s+/);
-    const contentWords = new Set(content.split(/\s+/));
-    const matchCount = queryWords.filter((w) => contentWords.has(w)).length;
-
-    if (matchCount > 0) {
-      return Math.min(0.7, 0.2 + (matchCount / queryWords.length) * 0.5);
-    }
-
-    return 0;
+    return randomUUID().slice(0, 16);
   }
 
   private fromRow(row: Record<string, unknown>): MemoryEntry {

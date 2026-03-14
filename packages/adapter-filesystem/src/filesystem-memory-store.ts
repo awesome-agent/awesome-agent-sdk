@@ -4,6 +4,9 @@
 import { readdir, readFile, writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import {
+  scoreRelevance,
+} from "@awesome-agent/agent-core";
 import type {
   MemoryStore,
   MemoryEntry,
@@ -68,7 +71,7 @@ export class FileSystemMemoryStore implements MemoryStore {
     const results: MemorySearchResult[] = entries
       .map((entry) => ({
         entry,
-        relevance: this.scoreRelevance(entry, lowerQuery),
+        relevance: scoreRelevance(entry, lowerQuery),
       }))
       .filter((r) => r.relevance > threshold)
       .sort((a, b) => b.relevance - a.relevance)
@@ -117,36 +120,6 @@ export class FileSystemMemoryStore implements MemoryStore {
   }
 
   // ─── Private Helpers ──────────────────────────────────────
-
-  private scoreRelevance(entry: MemoryEntry, lowerQuery: string): number {
-    if (!lowerQuery) return 0.5; // No query → equal relevance for all
-
-    const content = entry.content.toLowerCase();
-    const name = entry.name.toLowerCase();
-
-    // Exact name match
-    if (name === lowerQuery) return 1.0;
-
-    // Name contains query
-    if (name.includes(lowerQuery)) return 0.9;
-
-    // Content contains query — score by density
-    if (content.includes(lowerQuery)) {
-      const density = lowerQuery.length / content.length;
-      return Math.min(0.85, 0.5 + density * 5);
-    }
-
-    // Word-level overlap
-    const queryWords = lowerQuery.split(/\s+/);
-    const contentWords = new Set(content.split(/\s+/));
-    const matchCount = queryWords.filter((w) => contentWords.has(w)).length;
-
-    if (matchCount > 0) {
-      return Math.min(0.7, 0.2 + (matchCount / queryWords.length) * 0.5);
-    }
-
-    return 0;
-  }
 
   private filePath(id: string): string {
     return join(this.directory, `${id}${this.extension}`);

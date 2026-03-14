@@ -1,6 +1,7 @@
 // llm/stream.ts
 // LLMStream helper — wraps async event source, resolves usage/finishReason promises
 
+import { AgentError } from "../errors.js";
 import type {
   LLMStream,
   StreamEvent,
@@ -29,7 +30,7 @@ export class DefaultLLMStream implements LLMStream {
 
   [Symbol.asyncIterator](): AsyncIterator<StreamEvent> {
     if (this.consumed) {
-      throw new Error("LLMStream can only be iterated once");
+      throw new AgentError("LLMStream can only be iterated once");
     }
     this.consumed = true;
     return this.iterate();
