@@ -3,6 +3,10 @@
 import type { MCPMessage } from "@awesome-agent/agent-core";
 import { MCPRequestError, MCPConnectionError } from "@awesome-agent/agent-core";
 
+// ─── Constants ──────────────────────────────────────────────
+
+export const JSONRPC_VERSION = "2.0" as const;
+
 // ─── Types ───────────────────────────────────────────────────
 
 export interface PendingRequest {
@@ -20,7 +24,7 @@ export class JsonRpcClient {
   createRequest(method: string, params?: Record<string, unknown>): MCPMessage {
     const id = this.nextId++;
     return {
-      jsonrpc: "2.0",
+      jsonrpc: JSONRPC_VERSION,
       id,
       method,
       params,
@@ -38,7 +42,7 @@ export class JsonRpcClient {
   handleMessage(message: MCPMessage): void {
     if (message.id == null) return; // Notification, not a response
 
-    const id = typeof message.id === "string" ? parseInt(message.id) : message.id;
+    const id = typeof message.id === "string" ? Number(message.id) : message.id;
     const pending = this.pending.get(id);
     if (!pending) return;
 

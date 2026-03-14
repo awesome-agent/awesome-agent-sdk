@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   generateMemoryId,
   searchMemories,
+  AgentError,
 } from "@awesome-agent/agent-core";
 import type {
   MemoryStore,
@@ -69,7 +70,9 @@ export class FileSystemMemoryStore implements MemoryStore {
     try {
       await unlink(this.filePath(id));
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new AgentError(`Failed to delete: ${err instanceof Error ? err.message : String(err)}`);
+      }
       // File already gone — idempotent delete
     }
   }
