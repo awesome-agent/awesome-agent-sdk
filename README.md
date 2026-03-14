@@ -84,6 +84,353 @@ console.log(result.output);
 
 **Core** defines interfaces. **Adapters** implement them. Your app composes both.
 
+## Examples
+
+### 1. Multi-Tool Agent
+
+An agent that can read files and run shell commands, then reasons about the results:
+
+```typescript
+import fs from "fs/promises";
+import { execSync } from "child_process";
+import {
+  AgenticLoop, DefaultToolRegistry, DefaultToolExecutor,
+  DefaultHookManager, DefaultContextBuilder,
+} from "@algomim/agent-core";
+import { OpenAIAdapter } from "@algomim/adapter-openai";
+
+const llm = new OpenAIAdapter({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+const tools = new DefaultToolRegistry();
+
+tools.register({
+  name: "read_file",
+  description: "Read a file from disk",
+  parameters: {
+    type: "object",
+    properties: { path: { type: "string" } },
+    required: ["path"],
+  },
+  execute: async (args) => {
+    try {
+      const content = await fs.readFile(args.path as string, "utf-8");
+      return { success: true, content };
+    } catch (e) {
+      return { success: false, content: `Error: ${e}` };
+    }
+  },
+});
+
+tools.register({
+  name: "run_command",
+  description: "Run a shell command",
+  parameters: {
+    type: "object",
+    properties: { command: { type: "string" } },
+    required: ["command"],
+  },
+  execute: async (args) => {
+    try {
+      const output = execSync(args.command as string, { encoding: "utf-8" });
+      return { success: true, content: output };
+    } catch (e) {
+      return { success: false, content: `Error: ${e}` };
+    }
+  },
+});
+
+const loop = new AgenticLoop({
+  llm,
+  agent: {
+    id: "dev-agent",
+    name: "Dev Agent",
+    prompt: "You are a developer assistant. Use tools to help the user.",
+  },
+  tools,
+  executor: new DefaultToolExecutor(tools),
+  hooks: new DefaultHookManager(),
+  context: new DefaultContextBuilder(),
+});
+
+const result = await loop.run("Read package.json and tell me the version", "s1");
+console.log(result.output);
+// "The version in package.json is 0.1.0"
+console.log(result.toolCalls);
+// [{ name: "read_file", args: { path: "package.json" }, result: "..." }]
+```
+
+### 2. Hooks — Block Dangerous Tools
+
+Use hooks to enforce safety rules. This blocks any tool call to `delete_file`:
+
+```typescript
+import { DefaultHookManager, HookEvent } from "@algomim/agent-core";
+
+const hooks = new DefaultHookManager();
+
+hooks.register({
+  name: "safety-guard",
+  event: HookEvent.PreToolUse,
+  handler: async (payload) => {
+    if (payload.data.toolCall.name === "delete_file") {
+      return { action: "block", reason: "File deletion is not allowed" };
+    }
+    return { action: "continue" };
+  },
+});
+
+// Pass hooks to AgenticLoop — any delete_file call will be blocked
+const loop = new AgenticLoop({ llm, agent, tools, executor, hooks, context });
+```
+
+### 3. Retry + Backoff for Production
+
+Wrap any LLM adapter with automatic retry on transient errors:
+
+```typescript
+import { RetryLLMAdapter } from "@algomim/agent-core";
+import { OpenAIAdapter } from "@algomim/adapter-openai";
+
+const llm = new RetryLLMAdapter(
+  new OpenAIAdapter({
+    baseURL: "https://api.openai.com/v1",
+    apiKey: process.env.OPENAI_API_KEY,
+  }),
+  {
+    maxRetries: 3,
+    baseDelay: 1000,      // 1s, 2s, 4s (exponential)
+    maxDelay: 30_000,     // Cap at 30s
+    onRetry: (attempt, error, delay) => {
+      console.log(`Retry ${attempt}: ${error.message} (waiting ${delay}ms)`);
+    },
+  }
+);
+```
+
+### 4. Plan Mode — Think Before Acting
+
+Generate a plan first, review it, then execute:
+
+```typescript
+// Step 1: Generate plan (no tools executed)
+const planLoop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  planMode: true,
+});
+const planResult = await planLoop.run("Refactor the auth module", "s1");
+console.log(planResult.output);
+// "Step 1: Read auth.ts\nStep 2: Extract validation logic\nStep 3: ..."
+console.log(planResult.finishReason); // "plan_pending"
+
+// Step 2: Approve and execute (tools run this time)
+const execLoop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  planMode: true,
+  approvedPlan: planResult.output,
+});
+const execResult = await execLoop.run("Refactor the auth module", "s2");
+console.log(execResult.finishReason); // "complete"
+```
+
+### 5. Streaming Events
+
+Subscribe to real-time events for SSE/WebSocket integration:
+
+```typescript
+const loop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  onEvent: (event) => {
+    switch (event.type) {
+      case "text:delta":
+        process.stdout.write(event.text); // Stream text as it arrives
+        break;
+      case "tool:start":
+        console.log(`Calling ${event.name}...`);
+        break;
+      case "tool:end":
+        console.log(`${event.result.success ? "Done" : "Failed"}`);
+        break;
+      case "phase:change":
+        console.log(`${event.from} → ${event.to}`);
+        break;
+    }
+  },
+});
+```
+
+### 6. Skill Detection
+
+Automatically inject relevant prompts based on user input:
+
+```typescript
+import {
+  DefaultSkillRegistry, DefaultSkillDetector,
+} from "@algomim/agent-core";
+
+const skills = new DefaultSkillRegistry();
+skills.register({
+  name: "sql-expert",
+  description: "SQL query writing and optimization",
+  triggers: [
+    { type: "keyword", keyword: "SQL" },
+    { type: "keyword", keyword: "query" },
+    { type: "pattern", pattern: "SELECT.*FROM" },
+  ],
+});
+
+const loop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  skills,
+  skillDetector: new DefaultSkillDetector(),
+  skillLoader: {
+    loadPrompt: async (name) => {
+      // Load skill-specific instructions
+      return `You are an expert in ${name}. Always explain your queries.`;
+    },
+  },
+});
+
+// "sql-expert" skill auto-detected and injected into system prompt
+await loop.run("Write a SQL query to find top 10 customers", "s1");
+```
+
+### 7. MCP — Connect External Tool Servers
+
+Discover and use tools from Model Context Protocol servers:
+
+```typescript
+import { AgenticLoop } from "@algomim/agent-core";
+import type { MCPClient } from "@algomim/agent-core";
+
+// Your MCP client implementation
+const revitClient: MCPClient = {
+  id: "revit",
+  name: "Revit BIM Server",
+  connect: async () => { /* WebSocket connect */ },
+  disconnect: async () => { /* cleanup */ },
+  listTools: async () => [
+    { name: "execute_script", inputSchema: { type: "object" } },
+    { name: "search_api", inputSchema: { type: "object" } },
+  ],
+  callTool: async (name, args) => {
+    // Forward to MCP server
+    return { content: [{ type: "text", text: "result" }] };
+  },
+};
+
+const loop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  mcpClients: [revitClient], // Auto-discovered as revit_execute_script, revit_search_api
+});
+```
+
+### 8. Adaptive Token Estimation
+
+Token counting that learns from real LLM usage:
+
+```typescript
+import { AdaptiveEstimator, DefaultPruner } from "@algomim/agent-core";
+
+const estimator = new AdaptiveEstimator({
+  initialCharsPerToken: 4,  // Start with rough estimate
+  alpha: 0.3,               // EMA learning rate
+});
+
+const pruner = new DefaultPruner(estimator);
+
+const loop = new AgenticLoop({
+  llm, agent, tools, executor, hooks, context,
+  pruner,
+  tokenEstimator: estimator, // Loop auto-calibrates after each LLM call
+  maxContextTokens: 128_000,
+});
+
+// After a few iterations, estimator.currentRatio converges to real chars/token
+```
+
+### 9. Using Everything Together
+
+A production-ready agent combining all features:
+
+```typescript
+import {
+  AgenticLoop,
+  DefaultToolRegistry, DefaultToolExecutor,
+  DefaultHookManager, DefaultContextBuilder,
+  DefaultSkillRegistry, DefaultSkillDetector,
+  RetryLLMAdapter, AdaptiveEstimator, DefaultPruner,
+  StreamingCompactor, HookEvent,
+} from "@algomim/agent-core";
+import { OpenAIAdapter } from "@algomim/adapter-openai";
+
+// LLM with retry
+const llm = new RetryLLMAdapter(
+  new OpenAIAdapter({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY,
+  }),
+  { maxRetries: 3 }
+);
+
+// Tools
+const tools = new DefaultToolRegistry();
+tools.register({ /* your tools */ });
+
+// Skills
+const skills = new DefaultSkillRegistry();
+skills.register({ /* your skills */ });
+
+// Hooks
+const hooks = new DefaultHookManager();
+hooks.register({
+  name: "cost-tracker",
+  event: HookEvent.PostLLMCall,
+  handler: async (payload) => {
+    const { usage } = payload.data;
+    console.log(`Tokens: ${usage.inputTokens} in / ${usage.outputTokens} out`);
+    return { action: "continue" };
+  },
+});
+
+// Context management
+const estimator = new AdaptiveEstimator();
+const pruner = new DefaultPruner(estimator);
+const compactor = new StreamingCompactor(llm, {
+  preserveLastN: 6,
+  compactThreshold: 10,
+});
+
+// Run
+const loop = new AgenticLoop({
+  llm,
+  agent: {
+    id: "production-agent",
+    name: "Production Agent",
+    prompt: "You are a helpful assistant.",
+    maxIterations: 20,
+  },
+  tools,
+  executor: new DefaultToolExecutor(tools),
+  hooks,
+  context: new DefaultContextBuilder(),
+  skills,
+  skillDetector: new DefaultSkillDetector(),
+  skillLoader: { loadPrompt: async (name) => `Expert in ${name}.` },
+  pruner,
+  compactor,
+  tokenEstimator: estimator,
+  maxContextTokens: 128_000,
+  onEvent: (e) => {
+    if (e.type === "text:delta") process.stdout.write(e.text);
+  },
+});
+
+const result = await loop.run("Help me build a REST API", "session-1");
+```
+
 ## Key Features
 
 - **Agentic Loop** — Gather context, think (LLM), execute tools, verify results, repeat
