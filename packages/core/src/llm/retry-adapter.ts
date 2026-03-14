@@ -21,6 +21,8 @@ const DEFAULT_BASE_DELAY = 1000;
 const DEFAULT_MAX_DELAY = 30_000;
 const DEFAULT_RETRYABLE_STATUSES: readonly number[] = [429, 500, 503];
 const STATUS_CODE_PATTERN = /\((\d+)\)/;
+const JITTER_MIN = 0.85;
+const JITTER_RANGE = 0.3; // Jitter multiplier range: 0.85–1.15
 
 // ─── Retry Adapter ───────────────────────────────────────────
 
@@ -76,7 +78,7 @@ export class RetryLLMAdapter implements LLMAdapter {
   }
 
   private calculateDelay(attempt: number): number {
-    const jitter = 0.85 + Math.random() * 0.3; // 0.85–1.15
+    const jitter = JITTER_MIN + Math.random() * JITTER_RANGE;
     const delay = this.baseDelay * Math.pow(2, attempt) * jitter;
     return Math.min(delay, this.maxDelay);
   }

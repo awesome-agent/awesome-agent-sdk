@@ -4,6 +4,7 @@
 import type { Message, LLMAdapter } from "../llm/types.js";
 import type { Compactor } from "./types.js";
 import { buildTranscript } from "./transcript.js";
+import { streamSummary } from "./summarize.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -82,40 +83,32 @@ export class StreamingCompactor implements Compactor {
   ): Promise<string> {
     const transcript = buildTranscript(newMessages);
 
-    let prompt: string;
+    let userPrompt: string;
     if (this.existingSummary) {
-      prompt =
+      userPrompt =
         `Existing summary:\n${this.existingSummary}\n\n` +
         `New conversation to integrate:\n${transcript}\n\n` +
         "Update the summary to include the new information. Keep it concise.";
     } else {
-      prompt =
+      userPrompt =
         "Summarize the following conversation. " +
         "Preserve key decisions, tool results, and important context.\n\n" +
         transcript;
     }
 
     if (focusHint) {
-      prompt += `\n\nFocus especially on: ${focusHint}`;
+      userPrompt += `\n\nFocus especially on: ${focusHint}`;
     }
 
-    const stream = await this.llm.stream({
+    return streamSummary({
+      llm: this.llm,
       model: this.config?.model ?? "default",
       systemPrompt:
         "You are a conversation summarizer. Produce concise, factual summaries. " +
         "When given an existing summary and new conversation, merge them into one updated summary.",
-      messages: [{ role: "user", content: prompt }],
+      userPrompt,
       temperature: this.config?.temperature ?? DEFAULT_SUMMARY_TEMPERATURE,
       maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     });
-
-    let text = "";
-    for await (const event of stream) {
-      if (event.type === "text-delta") {
-        text += event.text;
-      }
-    }
-
-    return text;
   }
 }

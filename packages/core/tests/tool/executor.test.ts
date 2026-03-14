@@ -1,17 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { DefaultToolExecutor } from "../../src/tool/executor.js";
 import { DefaultToolRegistry } from "../../src/tool/registry.js";
-import type { Tool, ToolCall, ToolContext } from "../../src/tool/types.js";
+import { makeTool } from "../helpers/factories.js";
+import type { ToolCall, ToolContext } from "../../src/tool/types.js";
 import type { ToolMiddlewarePipeline } from "../../src/tool/middleware-types.js";
-
-function makeTool(name: string, result = "ok"): Tool {
-  return {
-    name,
-    description: `Tool ${name}`,
-    parameters: { type: "object" },
-    execute: async () => ({ success: true, content: result }),
-  };
-}
 
 const ctx: ToolContext = {
   sessionId: "s1",
