@@ -1,0 +1,91 @@
+{
+  "name": "@algomim/agent-core",
+  "version": "0.1.0",
+  "description": "Agentic loop core library — provider-agnostic, server-independent",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./llm": {
+      "import": "./dist/llm/index.js",
+      "types": "./dist/llm/index.d.ts"
+    },
+    "./tool": {
+      "import": "./dist/tool/index.js",
+      "types": "./dist/tool/index.d.ts"
+    },
+    "./hook": {
+      "import": "./dist/hook/index.js",
+      "types": "./dist/hook/index.d.ts"
+    },
+    "./context": {
+      "import": "./dist/context/index.js",
+      "types": "./dist/context/index.d.ts"
+    },
+    "./skill": {
+      "import": "./dist/skill/index.js",
+      "types": "./dist/skill/index.d.ts"
+    },
+    "./agent": {
+      "import": "./dist/agent/index.js",
+      "types": "./dist/agent/index.d.ts"
+    },
+    "./memory": {
+      "import": "./dist/memory/index.js",
+      "types": "./dist/memory/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
+    },
+    "./loop": {
+      "import": "./dist/loop/index.js",
+      "types": "./dist/loop/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "agent",
+    "agentic",
+    "llm",
+    "ai",
+    "openai",
+    "tool-use",
+    "function-calling",
+    "mcp",
+    "model-context-protocol",
+    "orchestrator"
+  ],
+  "author": "Algomim",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/algomim/awesome-agent-sdk.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/algomim/awesome-agent-sdk#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "sideEffects": false,
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  }
+}

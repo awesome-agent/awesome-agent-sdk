@@ -1,0 +1,40 @@
+{
+  "name": "@algomim/adapter-firestore",
+  "version": "0.1.0",
+  "description": "Firestore memory & chat store adapter for @algomim/agent-core",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/algomim/awesome-agent-sdk.git",
+    "directory": "packages/adapter-firestore"
+  },
+  "engines": { "node": ">=18.0.0" },
+  "sideEffects": false,
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  },
+  "peerDependencies": {
+    "@algomim/agent-core": "*"
+  },
+  "devDependencies": {
+    "@algomim/agent-core": "*",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  }
+}
