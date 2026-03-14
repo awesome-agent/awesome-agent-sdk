@@ -1,6 +1,6 @@
 // awesome-agent CLI — simple Ink UI
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { render, Box, Text, Static, useApp, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { sendMessage, queueMessage, clearHistory, model } from "./agent.js";
@@ -25,6 +25,7 @@ function App() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [streaming, setStreaming] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   const addLog = useCallback((type: LogEntry["type"], content: string, detail?: string) => {
     setLogs((prev) => [...prev, { id: nextId++, type, content, detail }]);
@@ -52,6 +53,8 @@ function App() {
     addLog("user", text);
     setBusy(true);
     setStreaming("");
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     let streamText = "";
     const startTime = Date.now();
@@ -83,7 +86,7 @@ function App() {
     };
 
     try {
-      const result = await sendMessage(text, onEvent);
+      const result = await sendMessage(text, onEvent, controller.signal);
       if (streamText) { addLog("text", streamText); setStreaming(""); }
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const { input: ti, output: to } = result.totalTokens;
@@ -93,9 +96,21 @@ function App() {
     }
 
     setBusy(false);
+    abortRef.current = null;
   }, [busy, addLog, exit]);
 
-  useInput((_, key) => { if (key.escape) exit(); });
+  useInput((_, key) => {
+    if (key.escape) {
+      if (busy && abortRef.current) {
+        // Agent running — abort it
+        abortRef.current.abort();
+        addLog("tool-fail", "Cancelled", "ESC pressed");
+      } else {
+        // Idle — exit app
+        exit();
+      }
+    }
+  });
 
   return (
     <>
