@@ -98,6 +98,30 @@ console.log(result.output);
 
 **Core** defines interfaces. **Adapters** implement them. **MCP Client** connects to external tool servers. Your app composes all three.
 
+## Multi-Turn Conversations
+
+The SDK returns messages after each run — pass them back as history for multi-turn:
+
+```typescript
+// First message
+const r1 = await loop.run("What's in package.json?", "session-1");
+console.log(r1.output);   // "The version is 0.1.0..."
+console.log(r1.messages);  // [user, assistant, tool, assistant, ...]
+
+// Follow-up — pass previous messages as history
+const r2 = await loop.run("Update the version to 1.0.0", "session-1", {
+  history: r1.messages,
+});
+console.log(r2.output);   // "Done! Updated version to 1.0.0"
+
+// Continue the conversation
+const r3 = await loop.run("Now run the tests", "session-1", {
+  history: r2.messages,
+});
+```
+
+SDK runs and returns messages. **You decide** where to store them (database, file, in-memory). Same pattern as [Vercel AI SDK](https://ai-sdk.dev/docs/ai-sdk-core/generating-text).
+
 ## Examples
 
 ### 1. Multi-Tool Agent
