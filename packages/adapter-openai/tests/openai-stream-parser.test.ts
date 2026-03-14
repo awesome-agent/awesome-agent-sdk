@@ -1,22 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { OpenAIStreamParser } from "../src/openai-stream-parser.js";
+import { sseChunk, makeSSEBody } from "./helpers/sse.js";
 import type { StreamEvent } from "@algomim/agent-core";
-
-function sseChunk(data: Record<string, unknown>): string {
-  return `data: ${JSON.stringify(data)}\n\n`;
-}
-
-function makeSSEBody(chunks: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) {
-        controller.enqueue(encoder.encode(chunk));
-      }
-      controller.close();
-    },
-  });
-}
 
 async function collectEvents(
   chunks: string[]

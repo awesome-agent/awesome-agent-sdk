@@ -4,6 +4,7 @@
 import type { Message, LLMAdapter } from "../llm/types.js";
 import type { Compactor } from "./types.js";
 import { buildTranscript } from "./transcript.js";
+import { streamSummary } from "./summarize.js";
 
 const DEFAULT_PRESERVE_LAST_N = 6;
 const DEFAULT_MAX_SUMMARY_TOKENS = 1024;
@@ -52,31 +53,23 @@ export class LLMCompactor implements Compactor {
   ): Promise<string> {
     const transcript = buildTranscript(messages);
 
-    let prompt =
+    let userPrompt =
       "Summarize the following conversation. " +
       "Preserve key decisions, tool results, and important context.\n\n" +
       transcript;
 
     if (focusHint) {
-      prompt += `\n\nFocus especially on: ${focusHint}`;
+      userPrompt += `\n\nFocus especially on: ${focusHint}`;
     }
 
-    const stream = await this.llm.stream({
+    return streamSummary({
+      llm: this.llm,
       model: this.config?.model ?? "default",
       systemPrompt:
         "You are a conversation summarizer. Produce concise, factual summaries.",
-      messages: [{ role: "user", content: prompt }],
+      userPrompt,
       temperature: this.config?.temperature ?? DEFAULT_SUMMARY_TEMPERATURE,
       maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
     });
-
-    let text = "";
-    for await (const event of stream) {
-      if (event.type === "text-delta") {
-        text += event.text;
-      }
-    }
-
-    return text;
   }
 }

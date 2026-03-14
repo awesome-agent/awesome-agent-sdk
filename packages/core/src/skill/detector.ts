@@ -16,6 +16,8 @@ export interface DetectorConfig {
   readonly keywordPartialScore?: number; // Default: 0.5
   readonly patternScore?: number; // Default: 0.9
   readonly childSkillWeight?: number; // Default: 0.5
+  /** Method priority order. First match wins. Default: ["pattern", "keyword"] */
+  readonly methodPriority?: readonly SkillMatch["method"][];
 }
 
 export const DEFAULT_KEYWORD_EXACT_SCORE = 0.8;
@@ -25,17 +27,21 @@ export const DEFAULT_CHILD_SKILL_WEIGHT = 0.5;
 
 // ─── Detector ────────────────────────────────────────────────
 
+const DEFAULT_METHOD_PRIORITY: readonly SkillMatch["method"][] = ["pattern", "keyword"];
+
 export class DefaultSkillDetector implements SkillDetector {
   private readonly keywordExactScore: number;
   private readonly keywordPartialScore: number;
   private readonly patternScore: number;
   private readonly childSkillWeight: number;
+  private readonly methodPriority: readonly SkillMatch["method"][];
 
   constructor(config?: DetectorConfig) {
     this.keywordExactScore = config?.keywordExactScore ?? DEFAULT_KEYWORD_EXACT_SCORE;
     this.keywordPartialScore = config?.keywordPartialScore ?? DEFAULT_KEYWORD_PARTIAL_SCORE;
     this.patternScore = config?.patternScore ?? DEFAULT_PATTERN_SCORE;
     this.childSkillWeight = config?.childSkillWeight ?? DEFAULT_CHILD_SKILL_WEIGHT;
+    this.methodPriority = config?.methodPriority ?? DEFAULT_METHOD_PRIORITY;
   }
 
   async detect(
@@ -137,8 +143,14 @@ export class DefaultSkillDetector implements SkillDetector {
   private getPrimaryMethod(
     triggers: readonly SkillTrigger[]
   ): SkillMatch["method"] {
-    for (const t of triggers) {
-      if (t.type === "pattern") return "pattern";
+    // Map trigger types to method names (semantic trigger → "llm" method)
+    const methods = new Set(
+      triggers.map((t): SkillMatch["method"] =>
+        t.type === "semantic" ? "llm" : t.type
+      )
+    );
+    for (const method of this.methodPriority) {
+      if (methods.has(method)) return method;
     }
     return "keyword";
   }
