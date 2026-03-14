@@ -75,6 +75,7 @@ describe("DefaultToolExecutor", () => {
     expect(result.results.get("c1")?.success).toBe(false);
     expect(result.results.get("c1")?.content).toBe("kaboom");
     expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].error).toContain('Tool "boom" failed');
   });
 
   it("runs middleware before — block", async () => {

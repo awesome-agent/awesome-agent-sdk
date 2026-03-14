@@ -2,7 +2,7 @@
 // Uses pg (node-postgres) — the most widely used Postgres client for Node.js
 
 import {
-  AgentError,
+  wrapError,
   generateMemoryId,
   searchMemories,
 } from "@awesome-agent/agent-core";
@@ -42,6 +42,9 @@ export interface PostgresMemoryStoreConfig {
 
 const DEFAULT_TABLE = "memories";
 const DEFAULT_SCHEMA = "public";
+const ID_COLUMN_LENGTH = 16;
+const TYPE_COLUMN_LENGTH = 32;
+const NAME_COLUMN_LENGTH = 255;
 
 // ─── Implementation ─────────────────────────────────────────
 
@@ -84,9 +87,7 @@ export class PostgresMemoryStore implements MemoryStore {
         ]
       );
     } catch (err) {
-      throw new AgentError(
-        `Failed to save memory entry: ${err instanceof Error ? err.message : String(err)}`
-      );
+      throw wrapError("Failed to save memory entry", err);
     }
 
     return { ...entry, id, createdAt: now, updatedAt: now };
@@ -106,9 +107,7 @@ export class PostgresMemoryStore implements MemoryStore {
     try {
       await this.client.query(`DELETE FROM ${this.table} WHERE id = $1`, [id]);
     } catch (err) {
-      throw new AgentError(
-        `Failed to delete memory entry "${id}": ${err instanceof Error ? err.message : String(err)}`
-      );
+      throw wrapError(`Failed to delete memory entry "${id}"`, err);
     }
   }
 
@@ -129,9 +128,7 @@ export class PostgresMemoryStore implements MemoryStore {
       const result = await this.client.query(sql, values);
       return result.rows.map((row) => this.fromRow(row));
     } catch (err) {
-      throw new AgentError(
-        `Failed to query memory entries: ${err instanceof Error ? err.message : String(err)}`
-      );
+      throw wrapError("Failed to query memory entries", err);
     }
   }
 
@@ -166,25 +163,30 @@ export class PostgresMemoryStore implements MemoryStore {
 
   private async ensureTable(): Promise<void> {
     if (!this.autoMigrate || this.migrated) return;
-    this.migrated = true;
 
-    await this.client.query(`
-      CREATE TABLE IF NOT EXISTS ${this.table} (
-        id VARCHAR(16) PRIMARY KEY,
-        type VARCHAR(32) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        metadata JSONB,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-      )
-    `);
+    try {
+      await this.client.query(`
+        CREATE TABLE IF NOT EXISTS ${this.table} (
+          id VARCHAR(${ID_COLUMN_LENGTH}) PRIMARY KEY,
+          type VARCHAR(${TYPE_COLUMN_LENGTH}) NOT NULL,
+          name VARCHAR(${NAME_COLUMN_LENGTH}) NOT NULL,
+          content TEXT NOT NULL,
+          metadata JSONB,
+          created_at BIGINT NOT NULL,
+          updated_at BIGINT NOT NULL
+        )
+      `);
 
-    // Index for type filtering — use configured table name, not the default
-    const sanitizedTable = this.rawTableName.replace(/[^a-zA-Z0-9_]/g, "_");
-    const indexName = `idx_${sanitizedTable}_type`;
-    await this.client.query(`
-      CREATE INDEX IF NOT EXISTS ${indexName} ON ${this.table} (type)
-    `);
+      // Index for type filtering — use configured table name, not the default
+      const sanitizedTable = this.rawTableName.replace(/[^a-zA-Z0-9_]/g, "_");
+      const indexName = `idx_${sanitizedTable}_type`;
+      await this.client.query(`
+        CREATE INDEX IF NOT EXISTS ${indexName} ON ${this.table} (type)
+      `);
+
+      this.migrated = true;
+    } catch (err) {
+      throw wrapError("Failed to migrate memory table", err);
+    }
   }
 }
