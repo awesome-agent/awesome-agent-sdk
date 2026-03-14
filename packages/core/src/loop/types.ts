@@ -1,7 +1,7 @@
 // loop/types.ts
 // Orchestrator types — depends only on interfaces (DIP compliant)
 
-import type { LLMAdapter } from "../llm/types.js";
+import type { LLMAdapter, Message } from "../llm/types.js";
 import type { ToolRegistry, ToolExecutor } from "../tool/executor-types.js";
 import type { HookManager } from "../hook/types.js";
 import type { ContextBuilder, Pruner, Compactor, TokenEstimator } from "../context/types.js";
@@ -14,13 +14,22 @@ import type { AgentConfig, SubagentRunner } from "../agent/types.js";
 import type { MemoryStore } from "../memory/types.js";
 import type { MCPClient } from "../mcp/types.js";
 
+// ─── Run Options ────────────────────────────────────────────
+
+export interface RunOptions {
+  /** Abort signal for cancellation */
+  readonly abort?: AbortSignal;
+  /** Previous messages to continue a conversation (multi-turn) */
+  readonly history?: readonly Message[];
+}
+
 // ─── Runnable Loop Interface (for DIP — SubagentRunner etc.) ─
 
 export interface RunnableLoop {
   run(
     input: string,
     sessionId: string,
-    abort?: AbortSignal
+    options?: RunOptions
   ): Promise<LoopResult>;
 }
 
@@ -140,6 +149,7 @@ export interface ToolCallLog {
 export interface LoopResult {
   readonly success: boolean;
   readonly output: string;
+  readonly messages: readonly Message[];
   readonly iterations: number;
   readonly totalTokens: Readonly<{ input: number; output: number }>;
   readonly toolCalls: readonly ToolCallLog[];

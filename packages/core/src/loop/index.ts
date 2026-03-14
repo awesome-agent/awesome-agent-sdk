@@ -2,6 +2,7 @@
 export { LoopPhase } from "./types.js";
 export type {
   RunnableLoop,
+  RunOptions,
   LoopConfig,
   LoopState,
   StateAction,
