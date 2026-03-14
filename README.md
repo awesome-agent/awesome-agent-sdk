@@ -82,19 +82,21 @@ console.log(result.output);
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│  Your Application                           │
-├─────────────────────────────────────────────┤
-│  Adapters (@awesome-agent/adapter-*)              │
-│  OpenAI, Anthropic, Firestore, FileSystem   │
-├─────────────────────────────────────────────┤
-│  @awesome-agent/agent-core                        │
-│  Loop, Tools, Hooks, Context, Skills,       │
-│  Memory, MCP, State Machine                 │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  Your Application                                    │
+├──────────────────────────────────────────────────────┤
+│  Adapters                                            │
+│  adapter-openai · adapter-anthropic                  │
+│  adapter-postgres · adapter-filesystem               │
+│  mcp-client (stdio transport)                        │
+├──────────────────────────────────────────────────────┤
+│  @awesome-agent/agent-core                           │
+│  Loop · Tools · Hooks · Context · Skills             │
+│  Memory · MCP · State Machine · Token Estimation     │
+└──────────────────────────────────────────────────────┘
 ```
 
-**Core** defines interfaces. **Adapters** implement them. Your app composes both.
+**Core** defines interfaces. **Adapters** implement them. **MCP Client** connects to external tool servers. Your app composes all three.
 
 ## Examples
 
@@ -472,8 +474,8 @@ const result = await loop.run("Help me build a REST API", "session-1");
 - **Tool System** — Registry, parallel execution, middleware pipeline
 - **Hook System** — Block, modify, or observe any loop event (type-safe)
 - **Skill Detection** — Keyword + pattern matching, progressive disclosure
-- **Memory** — Interface-only in core, implementations in adapters
-- **MCP Bridge** — Connect external tool servers via Model Context Protocol
+- **Memory** — PostgreSQL (production) or filesystem (local dev)
+- **MCP Client** — Connect to any MCP server with `StdioMCPClient` (fal.ai, GitHub, Slack, etc.)
 - **Plan Mode** — Think before acting: generate plan, approve, then execute
 - **Token Estimation** — Adaptive learning from real LLM usage (EMA)
 - **Context Management** — Pruning + streaming compaction for long conversations
