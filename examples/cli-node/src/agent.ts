@@ -114,7 +114,8 @@ export function clearHistory() {
 
 export async function sendMessage(
   input: string,
-  onEvent: (event: LoopEvent) => void
+  onEvent: (event: LoopEvent) => void,
+  abort?: AbortSignal
 ) {
   const config = {
     llm,
@@ -138,7 +139,7 @@ export async function sendMessage(
   };
 
   const loop = new AgenticLoop(config);
-  const result = await loop.run(input, "cli-session", { history });
+  const result = await loop.run(input, "cli-session", { history, abort });
   history = [...result.messages];
   return result;
 }
