@@ -5,7 +5,7 @@ import type { Message } from "../llm/types.js";
 import type { Pruner, PruneConfig, TokenEstimator } from "./types.js";
 import { CharBasedEstimator } from "./estimator.js";
 
-const DEFAULT_PRESERVE_LAST_N = 4;
+const DEFAULT_PRUNE_PRESERVE_LAST_N = 4;
 
 export class DefaultPruner implements Pruner {
   private readonly estimator: TokenEstimator;
@@ -24,7 +24,7 @@ export class DefaultPruner implements Pruner {
   }
 
   prune(messages: readonly Message[], config: PruneConfig): Message[] {
-    const preserveN = config.preserveLastN ?? DEFAULT_PRESERVE_LAST_N;
+    const preserveN = config.preserveLastN ?? DEFAULT_PRUNE_PRESERVE_LAST_N;
     const splitAt = Math.max(0, messages.length - preserveN);
     const tail = messages.slice(splitAt);
     const head = messages.slice(0, splitAt);

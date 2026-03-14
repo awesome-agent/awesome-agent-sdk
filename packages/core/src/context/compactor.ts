@@ -5,10 +5,11 @@ import type { Message, LLMAdapter } from "../llm/types.js";
 import type { Compactor } from "./types.js";
 import { buildTranscript } from "./transcript.js";
 import { streamSummary } from "./summarize.js";
-
-const DEFAULT_PRESERVE_LAST_N = 6;
-const DEFAULT_MAX_SUMMARY_TOKENS = 1024;
-const DEFAULT_SUMMARY_TEMPERATURE = 0.3;
+import {
+  DEFAULT_COMPACTOR_PRESERVE_LAST_N,
+  DEFAULT_COMPACTOR_MAX_SUMMARY_TOKENS,
+  DEFAULT_COMPACTOR_TEMPERATURE,
+} from "./compactor-defaults.js";
 
 export interface CompactorConfig {
   readonly model?: string;
@@ -27,7 +28,7 @@ export class LLMCompactor implements Compactor {
     messages: readonly Message[],
     focusHint?: string
   ): Promise<Message[]> {
-    const preserveN = this.config?.preserveLastN ?? DEFAULT_PRESERVE_LAST_N;
+    const preserveN = this.config?.preserveLastN ?? DEFAULT_COMPACTOR_PRESERVE_LAST_N;
 
     if (messages.length <= preserveN) {
       return [...messages];
@@ -68,8 +69,8 @@ export class LLMCompactor implements Compactor {
       systemPrompt:
         "You are a conversation summarizer. Produce concise, factual summaries.",
       userPrompt,
-      temperature: this.config?.temperature ?? DEFAULT_SUMMARY_TEMPERATURE,
-      maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_MAX_SUMMARY_TOKENS,
+      temperature: this.config?.temperature ?? DEFAULT_COMPACTOR_TEMPERATURE,
+      maxTokens: this.config?.maxSummaryTokens ?? DEFAULT_COMPACTOR_MAX_SUMMARY_TOKENS,
     });
   }
 }

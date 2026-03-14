@@ -142,7 +142,12 @@ export class PostgresMemoryStore implements MemoryStore {
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number,
       ...(row.metadata
-        ? { metadata: JSON.parse(row.metadata as string) }
+        ? {
+            metadata:
+              typeof row.metadata === "string"
+                ? JSON.parse(row.metadata)
+                : (row.metadata as Record<string, unknown>),
+          }
         : {}),
     };
   }

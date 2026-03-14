@@ -19,6 +19,7 @@ import type {
   ToolCallLog,
 } from "./types.js";
 import { createInitialState, transition } from "./state.js";
+import { AGENT_DEFAULTS } from "../agent/config.js";
 import { gatherPhase } from "./gather.js";
 import { thinkPhase } from "./think.js";
 import { executePhase } from "./execute.js";
@@ -26,7 +27,7 @@ import { verifyPhase } from "./verify.js";
 
 // ─── Constants ───────────────────────────────────────────────
 
-const DEFAULT_MAX_ITERATIONS = 50;
+const DEFAULT_MAX_ITERATIONS = AGENT_DEFAULTS.maxIterations;
 const DEFAULT_MAX_CONTEXT_TOKENS = 128_000;
 const PLAN_MODE_INSTRUCTION =
   "Create a step-by-step plan for the following task. Do not execute anything yet. " +

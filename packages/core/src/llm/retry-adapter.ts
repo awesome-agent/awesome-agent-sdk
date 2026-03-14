@@ -2,6 +2,7 @@
 // Decorator that adds exponential backoff retry to any LLMAdapter
 
 import type { LLMAdapter, LLMRequest, LLMStream } from "./types.js";
+import { LLMRequestError } from "../errors.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -72,6 +73,12 @@ export class RetryLLMAdapter implements LLMAdapter {
       return this.isRetryable(error);
     }
 
+    // Use typed error class if available (preferred)
+    if (error instanceof LLMRequestError) {
+      return this.retryableStatuses.includes(error.statusCode);
+    }
+
+    // Fallback: parse status code from error message (for non-typed errors)
     const match = error.message.match(STATUS_CODE_PATTERN);
     if (!match) return false;
     return this.retryableStatuses.includes(parseInt(match[1]));

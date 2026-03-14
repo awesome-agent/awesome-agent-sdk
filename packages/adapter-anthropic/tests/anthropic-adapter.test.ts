@@ -131,6 +131,17 @@ describe("AnthropicAdapter", () => {
     }
   });
 
+  it("throws LLMStreamError on null response body", async () => {
+    vi.stubGlobal("fetch", async () => ({
+      ok: true,
+      status: 200,
+      body: null,
+    }));
+
+    const { LLMStreamError } = await import("@awesome-agent/agent-core");
+    await expect(adapter.stream(baseRequest)).rejects.toBeInstanceOf(LLMStreamError);
+  });
+
   it("converts tool messages to tool_result format", async () => {
     let capturedBody: { messages: Array<Record<string, unknown>> } = { messages: [] };
 
