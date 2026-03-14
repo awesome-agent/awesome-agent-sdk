@@ -2,9 +2,8 @@
 // Phase: Gather — builds system prompt from context, skills, memory, and plan
 
 import type { MemorySection } from "../context/types.js";
+import { DEFAULT_MEMORY_MAX_RESULTS } from "../memory/utils.js";
 import type { LoopConfig } from "./types.js";
-
-const DEFAULT_MEMORY_MAX_RESULTS = 10;
 
 const APPROVED_PLAN_INSTRUCTION =
   "Follow the approved plan above. Execute each step using tools.";
