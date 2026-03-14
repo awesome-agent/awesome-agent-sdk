@@ -1,15 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DefaultToolRegistry } from "../../src/tool/registry.js";
-import type { Tool } from "../../src/tool/types.js";
-
-function makeTool(name: string): Tool {
-  return {
-    name,
-    description: `Tool ${name}`,
-    parameters: { type: "object" },
-    execute: async () => ({ success: true, content: "ok" }),
-  };
-}
+import { makeTool } from "../helpers/factories.js";
 
 describe("DefaultToolRegistry", () => {
   it("registers and retrieves a tool", () => {
