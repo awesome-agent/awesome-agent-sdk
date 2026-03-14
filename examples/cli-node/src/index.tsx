@@ -39,7 +39,7 @@ function App() {
     if (text === "/exit") return exit();
     if (text === "/clear") {
       clearHistory();
-      setLogs([]);
+      setLogs([{ id: nextId++, type: "stats", content: "conversation cleared" }]);
       setStreaming("");
       return;
     }
