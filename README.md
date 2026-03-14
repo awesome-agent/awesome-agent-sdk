@@ -309,34 +309,44 @@ const loop = new AgenticLoop({
 await loop.run("Write a SQL query to find top 10 customers", "s1");
 ```
 
-### 7. MCP — Connect External Tool Servers
+### 7. MCP — Connect Any MCP Server
 
-Discover and use tools from Model Context Protocol servers:
+Connect to any [MCP server](https://modelcontextprotocol.io) with one line — tools are auto-discovered:
+
+```bash
+npm install @awesome-agent/mcp-client
+```
 
 ```typescript
-import { AgenticLoop } from "@awesome-agent/agent-core";
-import type { MCPClient } from "@awesome-agent/agent-core";
+import { StdioMCPClient } from "@awesome-agent/mcp-client";
 
-// Your MCP client implementation
-const revitClient: MCPClient = {
-  id: "revit",
-  name: "Revit BIM Server",
-  connect: async () => { /* WebSocket connect */ },
-  disconnect: async () => { /* cleanup */ },
-  listTools: async () => [
-    { name: "execute_script", inputSchema: { type: "object" } },
-    { name: "search_api", inputSchema: { type: "object" } },
-  ],
-  callTool: async (name, args) => {
-    // Forward to MCP server
-    return { content: [{ type: "text", text: "result" }] };
-  },
-};
+// fal.ai — image & video generation
+const fal = new StdioMCPClient({
+  id: "fal",
+  name: "fal.ai",
+  command: "npx",
+  args: ["-y", "mcp-fal"],
+  env: { FAL_KEY: process.env.FAL_KEY },
+});
 
+// GitHub — repos, issues, PRs
+const github = new StdioMCPClient({
+  id: "github",
+  name: "GitHub",
+  command: "npx",
+  args: ["-y", "@modelcontextprotocol/server-github"],
+  env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_TOKEN },
+});
+
+// Use in AgenticLoop — tools auto-discovered
 const loop = new AgenticLoop({
   llm, agent, tools, executor, hooks, context,
-  mcpClients: [revitClient], // Auto-discovered as revit_execute_script, revit_search_api
+  mcpClients: [fal, github],
+  // Available tools: fal_generate_image, github_create_issue, github_search_repos, ...
 });
+```
+
+Connect multiple servers — each tool is prefixed with the server ID to avoid name collisions.
 ```
 
 ### 8. Adaptive Token Estimation
@@ -377,6 +387,7 @@ import {
   StreamingCompactor, HookEvent,
 } from "@awesome-agent/agent-core";
 import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
+import { StdioMCPClient } from "@awesome-agent/mcp-client";
 
 // LLM with retry
 const llm = new RetryLLMAdapter(
@@ -415,6 +426,17 @@ const compactor = new StreamingCompactor(llm, {
   compactThreshold: 10,
 });
 
+// MCP servers
+const mcpClients = [
+  new StdioMCPClient({
+    id: "github",
+    name: "GitHub",
+    command: "npx",
+    args: ["-y", "@modelcontextprotocol/server-github"],
+    env: { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_TOKEN },
+  }),
+];
+
 // Run
 const loop = new AgenticLoop({
   llm,
@@ -435,6 +457,7 @@ const loop = new AgenticLoop({
   compactor,
   tokenEstimator: estimator,
   maxContextTokens: 128_000,
+  mcpClients,
   onEvent: (e) => {
     if (e.type === "text:delta") process.stdout.write(e.text);
   },
