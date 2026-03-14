@@ -1,5 +1,6 @@
 // Simple CLI Agent — Node.js, zero extra dependencies
 // Uses readline for input, stdout for streaming output
+// Supports human-in-the-loop: type while agent is working to queue messages
 
 import { createInterface } from "node:readline";
 import {
@@ -9,6 +10,7 @@ import {
   DefaultHookManager,
   DefaultContextBuilder,
   RetryLLMAdapter,
+  HookEvent,
 } from "@awesome-agent/agent-core";
 import type { Message, LoopEvent } from "@awesome-agent/agent-core";
 import { OpenAIAdapter } from "@awesome-agent/adapter-openai";
@@ -111,9 +113,43 @@ tools.register({
   },
 });
 
+// ─── Message Queue (Human-in-the-loop) ──────────────────────
+
+const pendingMessages: string[] = [];
+
+// ─── Hooks ───────────────────────────────────────────────────
+
+const hooks = new DefaultHookManager();
+
+// Inject queued user messages before each LLM call
+hooks.register({
+  name: "inject-pending-messages",
+  event: HookEvent.PreLLMCall,
+  handler: async (payload) => {
+    if (pendingMessages.length === 0) {
+      return { action: "continue" as const };
+    }
+
+    // Merge all pending messages into the request
+    const extra = pendingMessages.splice(0).join("\n");
+    const request = payload.data.request;
+    const updatedMessages: Message[] = [
+      ...request.messages,
+      { role: "user", content: `[User interjection while you were working]: ${extra}` },
+    ];
+
+    return {
+      action: "modify" as const,
+      data: {
+        request: { ...request, messages: updatedMessages },
+      },
+    };
+  },
+});
+
 // ─── Loop ────────────────────────────────────────────────────
 
-const loop = new AgenticLoop({
+const baseConfig = {
   llm,
   agent: {
     id: "cli-agent",
@@ -123,15 +159,17 @@ const loop = new AgenticLoop({
       "list directories, and run commands. Be concise.\n\n" +
       "IMPORTANT: Call only ONE tool at a time. After each tool call, " +
       "briefly explain what you did and what you'll do next before calling " +
-      "the next tool. This helps the user follow your progress.",
+      "the next tool. This helps the user follow your progress.\n\n" +
+      "If you receive a [User interjection], acknowledge it and adjust " +
+      "your plan accordingly.",
     model,
     maxIterations: 15,
   },
   tools,
   executor: new DefaultToolExecutor(tools),
-  hooks: new DefaultHookManager(),
+  hooks,
   context: new DefaultContextBuilder(),
-});
+};
 
 // ─── Chat Loop ───────────────────────────────────────────────
 
@@ -141,9 +179,11 @@ const rl = createInterface({
 });
 
 let history: Message[] = [];
+let agentRunning = false;
 
 console.log(`\n  awesome-agent CLI (${model})`);
-console.log("  Type a message. /clear to reset, /exit to quit.\n");
+console.log("  Type a message. /clear to reset, /exit to quit.");
+console.log("  You can type while the agent is working — messages are queued.\n");
 
 function prompt() {
   rl.question("\x1b[32mYou:\x1b[0m ", async (input) => {
@@ -153,10 +193,19 @@ function prompt() {
     if (text === "/exit") return rl.close();
     if (text === "/clear") {
       history = [];
+      pendingMessages.length = 0;
       console.log("  (conversation cleared)\n");
       return prompt();
     }
 
+    // If agent is running, queue the message
+    if (agentRunning) {
+      pendingMessages.push(text);
+      console.log(`  \x1b[90m(queued — will be sent to agent on next iteration)\x1b[0m\n`);
+      return prompt();
+    }
+
+    agentRunning = true;
     process.stdout.write("\x1b[36mAgent:\x1b[0m ");
 
     let lastEventType = "";
@@ -164,7 +213,6 @@ function prompt() {
     const onEvent = (event: LoopEvent) => {
       switch (event.type) {
         case "text:delta":
-          // Add newline before text if previous event was a tool
           if (lastEventType === "tool:end") {
             process.stdout.write("\n\n\x1b[36mAgent:\x1b[0m ");
           }
@@ -180,24 +228,21 @@ function prompt() {
           lastEventType = "tool:end";
           break;
         case "iteration:end":
-          // Separate iterations visually
           lastEventType = "iteration:end";
           break;
       }
     };
 
     try {
-      const config = { ...loop["config"], onEvent };
+      const config = { ...baseConfig, onEvent };
       const localLoop = new AgenticLoop(config);
       const result = await localLoop.run(text, "cli-session", { history });
       history = [...result.messages];
 
-      // If streaming didn't print the output, print it now
       if (!result.output.length) {
         process.stdout.write("(no response)");
       }
 
-      // Token usage stats
       const { input: tokIn, output: tokOut } = result.totalTokens;
       console.log(
         `\n\n  \x1b[90m${result.iterations} iteration${result.iterations !== 1 ? "s" : ""} · ` +
@@ -210,6 +255,7 @@ function prompt() {
       );
     }
 
+    agentRunning = false;
     console.log("\n");
     prompt();
   });
