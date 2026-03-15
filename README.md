@@ -25,6 +25,7 @@ Your prompt ──────────► │  Gather ───► Act ─�
 | [@awesome-agent/adapter-postgres](packages/adapter-postgres) | PostgreSQL memory store (production) | Stable |
 | [@awesome-agent/adapter-filesystem](packages/adapter-filesystem) | File system memory store (local dev, CLI, debugging) | Stable |
 | [@awesome-agent/mcp-client](packages/mcp-client) | MCP transport (stdio) — connect to any MCP server | Stable |
+| [@awesome-agent/ui](packages/ui) | Headless React hooks for agent chat UIs — zero styling, pluggable transport | Stable |
 
 ## Quick Start
 
@@ -83,7 +84,11 @@ console.log(result.output);
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Your Application                                    │
+│  Your Application (Next.js, React, Node.js, etc.)    │
+├──────────────────────────────────────────────────────┤
+│  @awesome-agent/ui                                   │
+│  useAgentChat · useStreamingText · useToolStatus     │
+│  Transport · Part System · Resolver Registry         │
 ├──────────────────────────────────────────────────────┤
 │  Adapters                                            │
 │  adapter-openai · adapter-anthropic                  │
@@ -96,7 +101,144 @@ console.log(result.output);
 └──────────────────────────────────────────────────────┘
 ```
 
-**Core** defines interfaces. **Adapters** implement them. **MCP Client** connects to external tool servers. Your app composes all three.
+**Core** runs agents on the backend. **Adapters** connect to LLMs and storage. **UI** provides headless React hooks for the frontend. **MCP Client** connects to external tool servers. Your app composes them all.
+
+## UI SDK — Headless React Hooks
+
+Build any chat UI with zero styling opinions. The UI SDK gives you hooks and types — you bring your own components (shadcn, MUI, Tailwind, anything).
+
+```bash
+npm install @awesome-agent/ui
+```
+
+### Basic Usage
+
+```tsx
+import { useAgentChat } from "@awesome-agent/ui";
+import type { Transport } from "@awesome-agent/ui";
+
+// Implement your transport (SSE, WebSocket, fetch — your choice)
+const transport: Transport = {
+  async *send(message, options) {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal: options?.abort,
+    });
+    // Parse SSE stream and yield LoopEvents...
+  },
+};
+
+function ChatPage() {
+  const { messages, status, send, abort, reset, isLoading } = useAgentChat({
+    transport,
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            if (part.type === "text") return <span key={i}>{part.text}</span>;
+            if (part.type === "tool-call") return <div key={i}>Tool: {part.toolName} ({part.status})</div>;
+            return null;
+          })}
+        </div>
+      ))}
+      <input onKeyDown={(e) => e.key === "Enter" && send(e.currentTarget.value)} />
+      {isLoading && <button onClick={abort}>Stop</button>}
+    </div>
+  );
+}
+```
+
+### What the Hook Returns
+
+```typescript
+const {
+  messages,    // UIMessage[] — user + assistant messages with typed parts
+  status,      // "idle" | "connecting" | "streaming" | "tool-executing" | "error"
+  phase,       // Current backend LoopPhase
+  error,       // string | null
+  usage,       // { input: number, output: number } — cumulative tokens
+  iterations,  // number — completed loop iterations
+  send,        // (message: string) => Promise<void>
+  abort,       // () => void
+  reset,       // () => void
+  isLoading,   // boolean
+} = useAgentChat({ transport, partResolvers?, onError?, onDone?, mapHistory? });
+```
+
+### Message Part System
+
+Each message contains typed parts — text, tool calls, plans, or custom:
+
+```typescript
+interface UIMessage {
+  id: string;
+  role: "user" | "assistant";
+  parts: MessagePart[];  // text, tool-call, plan, custom
+  createdAt: number;
+}
+
+// Parts render naturally: text before tool, tool executing, text after tool
+// [TextPart("Let me check")] → [ToolCallPart(running)] → [TextPart("Done!")]
+```
+
+### Custom Part Resolvers
+
+Extend the part system with custom renderers — charts, 3D models, maps, anything:
+
+```typescript
+const chartResolver = {
+  resolve: (event) => {
+    if (event.type === "text:delta" && event.text.startsWith("```chart")) {
+      return { type: "custom", kind: "chart", data: parseChartData(event.text) };
+    }
+    return null; // Pass through to default handler
+  },
+};
+
+const { messages } = useAgentChat({
+  transport,
+  partResolvers: [chartResolver],
+});
+
+// Render custom parts
+msg.parts.map((part) => {
+  if (part.type === "custom" && part.kind === "chart") return <MyChart data={part.data} />;
+  // ...
+});
+```
+
+### Derived Hooks
+
+```typescript
+import { useStreamingText, useToolStatus } from "@awesome-agent/ui";
+
+// Get live streaming text + cursor state
+const { text, isStreaming } = useStreamingText(message);
+
+// Query tool execution status across all messages
+const { toolCalls, pending, isExecuting } = useToolStatus(messages);
+```
+
+### Transport Interface
+
+The transport is pluggable — SDK doesn't care how you connect to the backend:
+
+```typescript
+interface Transport {
+  send(message: string, options?: {
+    history?: TransportMessage[];
+    abort?: AbortSignal;
+  }): AsyncIterable<LoopEvent>;
+}
+```
+
+Implement it with SSE, WebSocket, fetch, or even in-memory for tests. See [examples/web-next](examples/web-next) for a full SSE implementation.
 
 ## Multi-Turn Conversations
 
@@ -492,9 +634,28 @@ const loop = new AgenticLoop({
 const result = await loop.run("Help me build a REST API", "session-1");
 ```
 
+## Running the Examples
+
+### CLI (Terminal)
+
+```bash
+cd examples/cli-node
+cp .env.example .env         # Add your API key
+npm run dev
+```
+
+### Web (Next.js)
+
+```bash
+cd examples/web-next
+cp .env.example .env.local   # Add your API key
+npm run dev                  # Opens http://localhost:3000
+```
+
 ## Key Features
 
 - **Agentic Loop** — Gather context, think (LLM), execute tools, verify results, repeat
+- **Headless UI SDK** — React hooks for chat UIs — zero styling, pluggable transport, custom part resolvers
 - **Tool System** — Registry, parallel execution, middleware pipeline
 - **Hook System** — Block, modify, or observe any loop event (type-safe)
 - **Skill Detection** — Keyword + pattern matching, progressive disclosure
