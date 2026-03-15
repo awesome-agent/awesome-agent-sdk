@@ -1,7 +1,7 @@
 {
-  "name": "@awesome-agent/adapter-openai",
+  "name": "@awesome-agent/ui",
   "version": "0.1.0",
-  "description": "OpenAI-compatible adapter for @awesome-agent/agent-core (OpenAI, OpenRouter, Groq, Ollama, Together)",
+  "description": "Headless React hooks for @awesome-agent — zero styling, pluggable transport",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,6 +19,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
@@ -27,17 +28,17 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/awesome-agent/awesome-agent-sdk.git",
-    "directory": "packages/adapter-openai"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "directory": "packages/ui"
   },
   "sideEffects": false,
   "peerDependencies": {
-    "@awesome-agent/agent-core": "*"
+    "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@awesome-agent/agent-core": "^0.1.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.14",
+    "jsdom": "^29.0.0",
+    "react": "^19.2.4",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   }
