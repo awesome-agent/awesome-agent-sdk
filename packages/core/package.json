@@ -7,44 +7,54 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./llm": {
+      "types": "./dist/llm/index.d.ts",
       "import": "./dist/llm/index.js",
-      "types": "./dist/llm/index.d.ts"
+      "default": "./dist/llm/index.js"
     },
     "./tool": {
+      "types": "./dist/tool/index.d.ts",
       "import": "./dist/tool/index.js",
-      "types": "./dist/tool/index.d.ts"
+      "default": "./dist/tool/index.js"
     },
     "./hook": {
+      "types": "./dist/hook/index.d.ts",
       "import": "./dist/hook/index.js",
-      "types": "./dist/hook/index.d.ts"
+      "default": "./dist/hook/index.js"
     },
     "./context": {
+      "types": "./dist/context/index.d.ts",
       "import": "./dist/context/index.js",
-      "types": "./dist/context/index.d.ts"
+      "default": "./dist/context/index.js"
     },
     "./skill": {
+      "types": "./dist/skill/index.d.ts",
       "import": "./dist/skill/index.js",
-      "types": "./dist/skill/index.d.ts"
+      "default": "./dist/skill/index.js"
     },
     "./agent": {
+      "types": "./dist/agent/index.d.ts",
       "import": "./dist/agent/index.js",
-      "types": "./dist/agent/index.d.ts"
+      "default": "./dist/agent/index.js"
     },
     "./memory": {
+      "types": "./dist/memory/index.d.ts",
       "import": "./dist/memory/index.js",
-      "types": "./dist/memory/index.d.ts"
+      "default": "./dist/memory/index.js"
     },
     "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
       "import": "./dist/mcp/index.js",
-      "types": "./dist/mcp/index.d.ts"
+      "default": "./dist/mcp/index.js"
     },
     "./loop": {
+      "types": "./dist/loop/index.d.ts",
       "import": "./dist/loop/index.js",
-      "types": "./dist/loop/index.d.ts"
+      "default": "./dist/loop/index.js"
     }
   },
   "files": [
