@@ -1,6 +1,6 @@
 {
   "name": "@awesome-agent/adapter-openai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenAI-compatible adapter for @awesome-agent/agent-core (OpenAI, OpenRouter, Groq, Ollama, Together)",
   "type": "module",
   "main": "dist/index.js",
@@ -37,7 +37,7 @@
     "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
-    "@awesome-agent/agent-core": "^0.1.0",
+    "@awesome-agent/agent-core": "^0.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   }

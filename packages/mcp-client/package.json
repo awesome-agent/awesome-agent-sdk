@@ -1,6 +1,6 @@
 {
   "name": "@awesome-agent/mcp-client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP transport clients (stdio, HTTP) for @awesome-agent/agent-core",
   "type": "module",
   "main": "dist/index.js",
@@ -36,7 +36,7 @@
     "@awesome-agent/agent-core": "*"
   },
   "devDependencies": {
-    "@awesome-agent/agent-core": "^0.1.0",
+    "@awesome-agent/agent-core": "^0.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   }
