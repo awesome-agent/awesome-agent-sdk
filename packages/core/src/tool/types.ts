@@ -13,6 +13,16 @@ export interface Tool {
     input: Record<string, unknown>,
     context: ToolContext
   ): Promise<ToolResult>;
+  // Deferred tools are excluded from LLM tool definitions until fetched
+  readonly shouldDefer?: boolean;
+  readonly searchHint?: string;
+  // Optional UI hooks for CLI rendering
+  readonly renderHooks?: ToolRenderHooks;
+}
+
+export interface ToolRenderHooks {
+  getSummary?(args: Record<string, unknown>): string | null;
+  formatResult?(result: ToolResult): string | null;
 }
 
 // ─── Tool Call & Result ──────────────────────────────────────

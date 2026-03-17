@@ -10,6 +10,10 @@ export interface ToolRegistry {
   get(name: string): Tool | undefined;
   getAll(): readonly Tool[];
   has(name: string): boolean;
+  /** Returns metadata for tools marked as deferred (not sent to LLM by default). */
+  getDeferred(): readonly { name: string; searchHint?: string }[];
+  /** Returns only non-deferred tools (sent to LLM). */
+  getNonDeferred(): readonly Tool[];
 }
 
 // ─── Tool Executor ───────────────────────────────────────────

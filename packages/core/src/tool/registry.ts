@@ -26,4 +26,14 @@ export class DefaultToolRegistry implements ToolRegistry {
   has(name: string): boolean {
     return this.tools.has(name);
   }
+
+  getDeferred(): { name: string; searchHint?: string }[] {
+    return [...this.tools.values()]
+      .filter((t) => t.shouldDefer === true)
+      .map((t) => ({ name: t.name, searchHint: t.searchHint }));
+  }
+
+  getNonDeferred(): Tool[] {
+    return [...this.tools.values()].filter((t) => !t.shouldDefer);
+  }
 }
