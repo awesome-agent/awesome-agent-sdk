@@ -39,7 +39,7 @@ export async function thinkPhase(
   const maxSteps = agent.maxSteps ?? state.maxIterations;
   const toolDefs: LLMToolDefinition[] =
     !forceNoTools && state.iteration <= maxSteps
-      ? tools.getAll().map((t) => ({
+      ? tools.getNonDeferred().map((t) => ({
           name: t.name,
           description: t.description,
           parameters: t.parameters,

@@ -28,18 +28,17 @@ const tools = new DefaultToolRegistry();
 
 tools.register({
   name: "calculate",
-  description: "Evaluate a math expression and return the result",
+  description: "Evaluate a math expression (e.g. 42 * 17 + 100)",
   parameters: {
     type: "object",
-    properties: { expression: { type: "string", description: "Math expression to evaluate" } },
+    properties: { expression: { type: "string", description: "Math expression" } },
     required: ["expression"],
   },
   execute: async (args) => {
     try {
       const expr = String(args.expression);
-      // Only allow numbers, operators, parentheses, whitespace, and decimal points
       if (!/^[\d+\-*/().%\s]+$/.test(expr)) {
-        return { success: false, content: "Invalid expression: only numbers and math operators allowed" };
+        return { success: false, content: "Invalid: only numbers and math operators allowed" };
       }
       const result = new Function(`"use strict"; return (${expr})`)();
       return { success: true, content: String(result) };
@@ -51,19 +50,73 @@ tools.register({
 
 tools.register({
   name: "get_weather",
-  description: "Get current weather for a city (mock data)",
+  description: "Get current real weather for a city",
   parameters: {
     type: "object",
-    properties: { city: { type: "string", description: "City name" } },
+    properties: { city: { type: "string", description: "City name (e.g. Istanbul, London, Tokyo)" } },
     required: ["city"],
   },
   execute: async (args) => {
-    const temps: Record<string, number> = {
-      istanbul: 18, london: 12, tokyo: 22, "new york": 15, berlin: 10, paris: 14,
-    };
-    const city = (args.city as string).toLowerCase();
-    const temp = temps[city] ?? Math.floor(Math.random() * 30);
-    return { success: true, content: `${args.city}: ${temp}°C, partly cloudy` };
+    try {
+      const city = encodeURIComponent(args.city as string);
+      const res = await fetch(`https://wttr.in/${city}?format=%C+%t+%h+%w&lang=en`);
+      if (!res.ok) return { success: false, content: `Weather API error: ${res.status}` };
+      const text = await res.text();
+      return { success: true, content: `${args.city}: ${text.trim()}` };
+    } catch (e) { return { success: false, content: `${e}` }; }
+  },
+});
+
+tools.register({
+  name: "web_search",
+  description: "Search the web and return top results with titles, URLs and snippets",
+  parameters: {
+    type: "object",
+    properties: { query: { type: "string", description: "Search query" } },
+    required: ["query"],
+  },
+  execute: async (args) => {
+    try {
+      const q = encodeURIComponent(args.query as string);
+      const res = await fetch(`https://html.duckduckgo.com/html/?q=${q}`, {
+        headers: { "User-Agent": "awesome-agent/0.1" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) return { success: false, content: `Search error: ${res.status}` };
+      const html = await res.text();
+      const results: string[] = [];
+      const regex = /<a rel="nofollow" class="result__a" href="([^"]+)"[^>]*>(.+?)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+      let match;
+      while ((match = regex.exec(html)) !== null && results.length < 5) {
+        const url = match[1].replace(/.*uddg=([^&]+).*/, (_, u) => decodeURIComponent(u));
+        const title = match[2].replace(/<[^>]+>/g, "").trim();
+        const snippet = match[3].replace(/<[^>]+>/g, "").trim();
+        results.push(`${title}\n${url}\n${snippet}`);
+      }
+      if (results.length === 0) return { success: false, content: "No results found" };
+      return { success: true, content: results.join("\n\n") };
+    } catch (e) { return { success: false, content: `${e}` }; }
+  },
+});
+
+tools.register({
+  name: "web_fetch",
+  description: "Fetch a URL and return the text content (max 5000 chars)",
+  parameters: {
+    type: "object",
+    properties: { url: { type: "string", description: "URL to fetch" } },
+    required: ["url"],
+  },
+  execute: async (args) => {
+    try {
+      const res = await fetch(args.url as string, {
+        headers: { "User-Agent": "awesome-agent/0.1" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) return { success: false, content: `HTTP ${res.status}` };
+      const text = await res.text();
+      return { success: true, content: text.slice(0, 5000) };
+    } catch (e) { return { success: false, content: `${e}` }; }
   },
 });
 
@@ -108,8 +161,8 @@ export async function POST(req: Request) {
             id: "web-agent",
             name: "Web Agent",
             prompt:
-              "You are a helpful assistant in a web chat. You can calculate math " +
-              "expressions and check weather. Be concise and friendly.",
+              "You are a helpful assistant in a web chat. You can calculate math, " +
+              "check real weather, search the web, and fetch web pages. Be concise and friendly.",
             model,
             maxIterations: 10,
           },
