@@ -5,9 +5,10 @@
 //                 ↑                  │
 //                 └── loop back ─────┘
 
-import type { Message, ContentPart, Usage } from "../llm/types.js";
+import type { Message, ContentPart, Usage, UserContent } from "../llm/types.js";
 import { HookEvent } from "../hook/types.js";
 import { MCPToolBridge } from "../mcp/bridge.js";
+import { createMemoryTools } from "../storage/memory-tool.js";
 import { LoopPhase } from "./types.js";
 import type {
   LoopConfig,
@@ -19,7 +20,6 @@ import type {
   ToolCallLog,
 } from "./types.js";
 import { createInitialState, transition } from "./state.js";
-import { AGENT_DEFAULTS } from "../agent/config.js";
 import { gatherPhase } from "./gather.js";
 import { thinkPhase } from "./think.js";
 import { executePhase } from "./execute.js";
@@ -27,7 +27,7 @@ import { verifyPhase } from "./verify.js";
 
 // ─── Constants ───────────────────────────────────────────────
 
-const DEFAULT_MAX_ITERATIONS = AGENT_DEFAULTS.maxIterations;
+const DEFAULT_MAX_ITERATIONS = 50;
 const DEFAULT_MAX_CONTEXT_TOKENS = 128_000;
 const PLAN_MODE_INSTRUCTION =
   "Create a step-by-step plan for the following task. Do not execute anything yet. " +
@@ -76,7 +76,6 @@ function buildLoopResult(
   return {
     success: finishReason === "complete",
     output,
-    messages: [...messages],
     iterations: state.iteration,
     totalTokens: state.tokenUsage,
     toolCalls: toolCallLogs,
@@ -95,7 +94,7 @@ export class AgenticLoop implements RunnableLoop {
   }
 
   async run(
-    input: string,
+    input: UserContent,
     sessionId: string,
     options?: RunOptions
   ): Promise<LoopResult> {
@@ -107,7 +106,7 @@ export class AgenticLoop implements RunnableLoop {
     // immutable, but messages use in-place mutation to avoid copying the full
     // array on every iteration — a deliberate performance trade-off for long
     // conversations with large tool results.
-    const messages: Message[] = options?.history ? [...options.history] : [];
+    const messages: Message[] = [];
     const toolCallLogs: ToolCallLog[] = [];
     const emit = (e: LoopEvent): void => this.emit(e);
 
@@ -117,6 +116,9 @@ export class AgenticLoop implements RunnableLoop {
       // ── Gather ────────────────────────────────────
       state = this.phaseTransition(state, LoopPhase.Gathering);
       const systemPrompt = await gatherPhase(this.config, input);
+      if (options?.history) {
+        messages.push(...options.history);
+      }
       messages.push({ role: "user", content: input });
       await hooks.dispatch(
         HookEvent.SessionStart,
@@ -126,17 +128,11 @@ export class AgenticLoop implements RunnableLoop {
 
       // ── Plan Mode ──────────────────────────────────
       if (this.config.planMode && !this.config.approvedPlan) {
-        const result = await this.runPlanMode(
+        const planResult = await this.runPlanMode(
           state, messages, emit, systemPrompt, sessionId
         );
-        // Ensure SessionEnd + done event fire (same as normal path)
-        this.emit({ type: "done", result });
-        await hooks.dispatch(
-          HookEvent.SessionEnd,
-          { reason: result.finishReason },
-          sessionId
-        );
-        return result;
+        this.emit({ type: "done", result: planResult });
+        return planResult;
       }
 
       // ── Main Loop ─────────────────────────────────
@@ -158,6 +154,12 @@ export class AgenticLoop implements RunnableLoop {
   private async initialize(): Promise<void> {
     if (this.initialized) return;
     this.initialized = true;
+
+    if (this.config.storage) {
+      for (const tool of createMemoryTools(this.config.storage)) {
+        this.config.tools.register(tool);
+      }
+    }
 
     if (this.config.mcpClients?.length) {
       await MCPToolBridge.registerFromClients(
@@ -209,7 +211,6 @@ export class AgenticLoop implements RunnableLoop {
     return {
       success: true,
       output: planResult.text,
-      messages: [...messages],
       iterations: 0,
       totalTokens: state.tokenUsage,
       toolCalls: [],

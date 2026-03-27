@@ -3,14 +3,13 @@
 
 import type { Tool } from "./types.js";
 import type { ToolRegistry } from "./executor-types.js";
-import { DuplicateRegistrationError } from "../errors.js";
 
 export class DefaultToolRegistry implements ToolRegistry {
   private readonly tools = new Map<string, Tool>();
 
   register(tool: Tool): void {
     if (this.tools.has(tool.name)) {
-      throw new DuplicateRegistrationError("Tool", tool.name);
+      throw new Error(`Tool "${tool.name}" is already registered`);
     }
     this.tools.set(tool.name, tool);
   }
@@ -25,15 +24,5 @@ export class DefaultToolRegistry implements ToolRegistry {
 
   has(name: string): boolean {
     return this.tools.has(name);
-  }
-
-  getDeferred(): { name: string; searchHint?: string }[] {
-    return [...this.tools.values()]
-      .filter((t) => t.shouldDefer === true)
-      .map((t) => ({ name: t.name, searchHint: t.searchHint }));
-  }
-
-  getNonDeferred(): Tool[] {
-    return [...this.tools.values()].filter((t) => !t.shouldDefer);
   }
 }

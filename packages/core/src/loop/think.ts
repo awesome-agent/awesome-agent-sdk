@@ -10,7 +10,6 @@ import type {
 } from "../llm/types.js";
 import type { ToolCall } from "../tool/types.js";
 import { HookEvent } from "../hook/types.js";
-import { LLMBlockedError } from "../errors.js";
 import type { LoopConfig, LoopEvent, LoopState } from "./types.js";
 
 // ─── Result Type ─────────────────────────────────────────────
@@ -39,7 +38,7 @@ export async function thinkPhase(
   const maxSteps = agent.maxSteps ?? state.maxIterations;
   const toolDefs: LLMToolDefinition[] =
     !forceNoTools && state.iteration <= maxSteps
-      ? tools.getNonDeferred().map((t) => ({
+      ? tools.getAll().map((t) => ({
           name: t.name,
           description: t.description,
           parameters: t.parameters,
@@ -61,7 +60,7 @@ export async function thinkPhase(
     sessionId
   );
   if (hookResult.action === "block") {
-    throw new LLMBlockedError(hookResult.reason);
+    throw new Error(`LLM call blocked: ${hookResult.reason}`);
   }
   if (hookResult.action === "modify") {
     request = hookResult.data.request;

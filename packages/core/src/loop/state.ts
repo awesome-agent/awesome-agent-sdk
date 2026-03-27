@@ -3,7 +3,6 @@
 
 import { LoopPhase } from "./types.js";
 import type { LoopState, StateAction } from "./types.js";
-import { AgentError } from "../errors.js";
 
 /** Create initial loop state */
 export function createInitialState(maxIterations: number): LoopState {
@@ -49,7 +48,7 @@ export function transition(state: LoopState, action: StateAction): LoopState {
 
     default: {
       const _exhaustive: never = action;
-      throw new AgentError(`Unknown state action: ${(_exhaustive as StateAction).type}`);
+      throw new Error(`Unknown state action: ${(_exhaustive as StateAction).type}`);
     }
   }
 }

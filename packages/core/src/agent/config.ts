@@ -2,11 +2,10 @@
 // AgentConfig builder — single responsibility: build + validate
 
 import type { AgentConfig, PermissionRule } from "./types.js";
-import { ConfigError } from "../errors.js";
 
 // ─── Builder ─────────────────────────────────────────────────
 
-export const AGENT_DEFAULTS = {
+const DEFAULTS = {
   temperature: 0.7,
   maxIterations: 50,
 } as const;
@@ -67,17 +66,17 @@ export class AgentConfigBuilder {
   }
 
   build(): AgentConfig {
-    if (!this.partial.id) throw new ConfigError("AgentConfig requires id");
-    if (!this.partial.name) throw new ConfigError("AgentConfig requires name");
-    if (!this.partial.prompt) throw new ConfigError("AgentConfig requires prompt");
+    if (!this.partial.id) throw new Error("AgentConfig requires id");
+    if (!this.partial.name) throw new Error("AgentConfig requires name");
+    if (!this.partial.prompt) throw new Error("AgentConfig requires prompt");
 
     return {
       id: this.partial.id,
       name: this.partial.name,
       prompt: this.partial.prompt,
       model: this.partial.model,
-      temperature: this.partial.temperature ?? AGENT_DEFAULTS.temperature,
-      maxIterations: this.partial.maxIterations ?? AGENT_DEFAULTS.maxIterations,
+      temperature: this.partial.temperature ?? DEFAULTS.temperature,
+      maxIterations: this.partial.maxIterations ?? DEFAULTS.maxIterations,
       maxSteps: this.partial.maxSteps,
       tools: this.partial.tools,
       skills: this.partial.skills,
@@ -85,4 +84,3 @@ export class AgentConfigBuilder {
     };
   }
 }
-
