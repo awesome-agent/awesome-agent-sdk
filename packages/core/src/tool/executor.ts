@@ -2,7 +2,6 @@
 // Default ToolExecutor — parallel execution with optional middleware pipeline
 
 import type { ToolCall, ToolResult, ToolContext } from "./types.js";
-import { ToolExecutionError } from "../errors.js";
 import type {
   ToolRegistry,
   ToolExecutor,
@@ -78,10 +77,9 @@ export class DefaultToolExecutor implements ToolExecutor {
 
           results.set(call.id, result);
         } catch (err) {
-          const cause = err instanceof Error ? err.message : String(err);
-          const typed = new ToolExecutionError(call.name, cause);
-          errors.push({ callId: call.id, toolName: call.name, error: typed.message });
-          results.set(call.id, { success: false, content: cause });
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push({ callId: call.id, toolName: call.name, error: msg });
+          results.set(call.id, { success: false, content: msg });
         }
       })
     );

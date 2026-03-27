@@ -1,5 +1,5 @@
 // Types
-export type { Tool, ToolCall, ToolResult, ToolFile, ToolContext, ToolRenderHooks } from "./types.js";
+export type { Tool, ToolCall, ToolResult, ToolFile, ToolContext } from "./types.js";
 export type {
   ToolRegistry,
   ToolExecutor,

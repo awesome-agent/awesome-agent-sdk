@@ -9,7 +9,6 @@ import type {
   HookPayloadMap,
   HookResult,
 } from "./types.js";
-import { DuplicateRegistrationError } from "../errors.js";
 
 const DEFAULT_HOOK_PRIORITY = 100;
 
@@ -19,7 +18,7 @@ export class DefaultHookManager implements HookManager {
 
   register<E extends HookEvent>(hook: Hook<E>): void {
     if (this.hooksByName.has(hook.name)) {
-      throw new DuplicateRegistrationError("Hook", hook.name);
+      throw new Error(`Hook "${hook.name}" is already registered`);
     }
 
     this.hooksByName.set(hook.name, hook as Hook);

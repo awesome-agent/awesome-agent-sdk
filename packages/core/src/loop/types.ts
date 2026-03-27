@@ -1,7 +1,7 @@
 // loop/types.ts
 // Orchestrator types — depends only on interfaces (DIP compliant)
 
-import type { LLMAdapter, Message } from "../llm/types.js";
+import type { LLMAdapter, Message, UserContent } from "../llm/types.js";
 import type { ToolRegistry, ToolExecutor } from "../tool/executor-types.js";
 import type { HookManager } from "../hook/types.js";
 import type { ContextBuilder, Pruner, Compactor, TokenEstimator } from "../context/types.js";
@@ -13,6 +13,7 @@ import type {
 import type { AgentConfig, SubagentRunner } from "../agent/types.js";
 import type { MemoryStore } from "../memory/types.js";
 import type { MCPClient } from "../mcp/types.js";
+import type { StorageBackend } from "../storage/types.js";
 
 // ─── Run Options ────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ export interface RunOptions {
 
 export interface RunnableLoop {
   run(
-    input: string,
+    input: UserContent,
     sessionId: string,
     options?: RunOptions
   ): Promise<LoopResult>;
@@ -56,6 +57,7 @@ export interface LoopConfig {
   readonly skillLoader?: SkillLoader;
   readonly subagentRunner?: SubagentRunner;
   readonly memory?: MemoryStore;
+  readonly storage?: StorageBackend;
   readonly mcpClients?: readonly MCPClient[];
   readonly tokenEstimator?: TokenEstimator;
   readonly maxContextTokens?: number; // Default: 128_000
@@ -149,7 +151,6 @@ export interface ToolCallLog {
 export interface LoopResult {
   readonly success: boolean;
   readonly output: string;
-  readonly messages: readonly Message[];
   readonly iterations: number;
   readonly totalTokens: Readonly<{ input: number; output: number }>;
   readonly toolCalls: readonly ToolCallLog[];

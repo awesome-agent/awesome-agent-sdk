@@ -10,6 +10,11 @@ export interface TextContent {
   readonly text: string;
 }
 
+export interface ImageContent {
+  readonly type: "image_url";
+  readonly image_url: { readonly url: string };
+}
+
 export interface ToolCallContent {
   readonly type: "tool_call";
   readonly id: string;
@@ -18,12 +23,14 @@ export interface ToolCallContent {
 }
 
 export type ContentPart = TextContent | ToolCallContent;
+export type UserContentPart = TextContent | ImageContent;
+export type UserContent = string | readonly UserContentPart[];
 
 // ─── Messages (discriminated union) ─────────────────────────
 
 export type Message =
   | { readonly role: "system"; readonly content: string }
-  | { readonly role: "user"; readonly content: string }
+  | { readonly role: "user"; readonly content: UserContent }
   | { readonly role: "assistant"; readonly content: readonly ContentPart[] }
   | {
       readonly role: "tool";

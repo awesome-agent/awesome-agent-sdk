@@ -1,6 +1,6 @@
 {
   "name": "@awesome-agent/agent-core",
-  "version": "0.2.0",
+  "version": "0.3.9",
   "description": "Agentic loop core library — provider-agnostic, server-independent",
   "type": "module",
   "main": "dist/index.js",
@@ -45,6 +45,11 @@
       "types": "./dist/memory/index.d.ts",
       "import": "./dist/memory/index.js",
       "default": "./dist/memory/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js",
+      "default": "./dist/storage/index.js"
     },
     "./mcp": {
       "types": "./dist/mcp/index.d.ts",

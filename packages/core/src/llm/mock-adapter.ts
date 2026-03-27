@@ -1,7 +1,6 @@
 // llm/mock-adapter.ts
 // Mock LLM adapter for testing — deterministic, no network calls
 
-import { ConfigError } from "../errors.js";
 import type {
   LLMAdapter,
   LLMRequest,
@@ -47,7 +46,7 @@ export class MockLLMAdapter implements LLMAdapter {
 
     const response = this.responses[this.callIndex++];
     if (!response) {
-      throw new ConfigError(
+      throw new Error(
         `MockLLMAdapter: no response queued at index ${this.callIndex - 1}`
       );
     }

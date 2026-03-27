@@ -9,6 +9,6 @@ export * from "./context/index.js";
 export * from "./skill/index.js";
 export * from "./agent/index.js";
 export * from "./memory/index.js";
+export * from "./storage/index.js";
 export * from "./mcp/index.js";
 export * from "./loop/index.js";
-export * from "./errors.js";

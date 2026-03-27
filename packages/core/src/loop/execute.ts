@@ -1,8 +1,8 @@
 // loop/execute.ts
 // Phase: Execute — runs tool calls, processes results, dispatches hooks
 
-import type { Message, ContentPart } from "../llm/types.js";
-import type { ToolCall, ToolContext } from "../tool/types.js";
+import type { Message } from "../llm/types.js";
+import type { ToolCall } from "../tool/types.js";
 import { HookEvent } from "../hook/types.js";
 import type { LoopConfig, LoopEvent, ToolCallLog } from "./types.js";
 
@@ -27,7 +27,7 @@ export async function executePhase(
   const { hooks, executor, agent } = config;
 
   // Add assistant message (text + tool calls) to history
-  const contentParts: ContentPart[] = [
+  const contentParts = [
     ...(assistantText
       ? [{ type: "text" as const, text: assistantText }]
       : []),
@@ -74,7 +74,7 @@ export async function executePhase(
   }
 
   // Execute tools
-  const toolContext: ToolContext = {
+  const toolContext = {
     sessionId,
     agentId: agent.id,
     abort,

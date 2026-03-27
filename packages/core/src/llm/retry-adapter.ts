@@ -2,7 +2,6 @@
 // Decorator that adds exponential backoff retry to any LLMAdapter
 
 import type { LLMAdapter, LLMRequest, LLMStream } from "./types.js";
-import { AgentError, LLMRequestError } from "../errors.js";
 
 // ─── Configuration ───────────────────────────────────────────
 
@@ -22,8 +21,6 @@ const DEFAULT_BASE_DELAY = 1000;
 const DEFAULT_MAX_DELAY = 30_000;
 const DEFAULT_RETRYABLE_STATUSES: readonly number[] = [429, 500, 503];
 const STATUS_CODE_PATTERN = /\((\d+)\)/;
-const JITTER_MIN = 0.85;
-const JITTER_RANGE = 0.3; // Jitter multiplier range: 0.85–1.15
 
 // ─── Retry Adapter ───────────────────────────────────────────
 
@@ -53,7 +50,7 @@ export class RetryLLMAdapter implements LLMAdapter {
       try {
         return await this.inner.stream(request);
       } catch (err) {
-        lastError = err instanceof Error ? err : new AgentError(String(err));
+        lastError = err instanceof Error ? err : new Error(String(err));
 
         if (attempt === this.maxRetries || !this.shouldRetry(lastError)) {
           throw lastError;
@@ -73,19 +70,13 @@ export class RetryLLMAdapter implements LLMAdapter {
       return this.isRetryable(error);
     }
 
-    // Use typed error class if available (preferred)
-    if (error instanceof LLMRequestError) {
-      return this.retryableStatuses.includes(error.statusCode);
-    }
-
-    // Fallback: parse status code from error message (for non-typed errors)
     const match = error.message.match(STATUS_CODE_PATTERN);
     if (!match) return false;
     return this.retryableStatuses.includes(parseInt(match[1]));
   }
 
   private calculateDelay(attempt: number): number {
-    const jitter = JITTER_MIN + Math.random() * JITTER_RANGE;
+    const jitter = 0.85 + Math.random() * 0.3; // 0.85–1.15
     const delay = this.baseDelay * Math.pow(2, attempt) * jitter;
     return Math.min(delay, this.maxDelay);
   }
