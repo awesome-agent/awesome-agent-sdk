@@ -68,6 +68,9 @@ export interface LoopConfig {
   readonly planMode?: boolean;
   readonly approvedPlan?: string; // Pre-approved plan — skips planning phase
 
+  // Custom data passed to ToolContext.extensions (e.g. userId, serviceConfig)
+  readonly toolExtensions?: Readonly<Record<string, unknown>>;
+
   // Event callback — server layer consumes this for SSE/WebSocket
   readonly onEvent?: (event: LoopEvent) => void;
 }

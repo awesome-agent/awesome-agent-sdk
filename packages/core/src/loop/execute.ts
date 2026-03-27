@@ -78,7 +78,7 @@ export async function executePhase(
     sessionId,
     agentId: agent.id,
     abort,
-    extensions: {},
+    extensions: config.toolExtensions ?? {},
   };
 
   const execResult = await executor.execute(resolvedCalls, toolContext);
