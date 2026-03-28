@@ -1,12 +1,13 @@
 // tool/executor.ts
 // Default ToolExecutor — parallel execution with optional middleware pipeline
 
-import type { ToolCall, ToolResult, ToolContext } from "./types.js";
+import type { ToolCall, ToolResult, ToolContext, ToolProgressData } from "./types.js";
 import type {
   ToolRegistry,
   ToolExecutor,
   ToolExecutionResult,
   ToolError,
+  OnToolProgress,
 } from "./executor-types.js";
 import type { ToolMiddlewarePipeline } from "./middleware-types.js";
 
@@ -18,7 +19,8 @@ export class DefaultToolExecutor implements ToolExecutor {
 
   async execute(
     calls: readonly ToolCall[],
-    context: ToolContext
+    context: ToolContext,
+    onProgress?: OnToolProgress
   ): Promise<ToolExecutionResult> {
     const results = new Map<string, ToolResult>();
     const errors: ToolError[] = [];
@@ -64,8 +66,11 @@ export class DefaultToolExecutor implements ToolExecutor {
             }
           }
 
-          // Execute tool
-          let result = await tool.execute(args, context);
+          // Execute tool — per-call context with bound emitProgress
+          const callContext: ToolContext = onProgress
+            ? { ...context, emitProgress: (data: ToolProgressData) => onProgress(call.id, data) }
+            : context;
+          let result = await tool.execute(args, callContext);
 
           // After middleware
           if (this.pipeline) {

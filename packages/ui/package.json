@@ -1,6 +1,6 @@
 {
   "name": "@awesome-agent/ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Headless React hooks for @awesome-agent — zero styling, pluggable transport",
   "type": "module",
   "main": "dist/index.js",

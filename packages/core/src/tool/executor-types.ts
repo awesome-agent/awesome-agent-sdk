@@ -1,7 +1,7 @@
 // tool/executor-types.ts
 // Single concern: tool registry and execution infrastructure
 
-import type { Tool, ToolCall, ToolResult, ToolContext } from "./types.js";
+import type { Tool, ToolCall, ToolResult, ToolContext, ToolProgressData } from "./types.js";
 
 // ─── Tool Registry ───────────────────────────────────────────
 
@@ -12,12 +12,17 @@ export interface ToolRegistry {
   has(name: string): boolean;
 }
 
+// ─── Progress Callback ──────────────────────────────────────
+
+export type OnToolProgress = (callId: string, data: ToolProgressData) => void;
+
 // ─── Tool Executor ───────────────────────────────────────────
 
 export interface ToolExecutor {
   execute(
     calls: readonly ToolCall[],
-    context: ToolContext
+    context: ToolContext,
+    onProgress?: OnToolProgress
   ): Promise<ToolExecutionResult>;
 }
 
