@@ -136,7 +136,9 @@ export type LoopEvent =
   | {
       readonly type: "tool:progress";
       readonly callId: string;
-      readonly message: string;
+      readonly progress: number;
+      readonly total?: number;
+      readonly message?: string;
     }
   | {
       readonly type: "iteration:end";

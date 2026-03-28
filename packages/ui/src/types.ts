@@ -29,6 +29,13 @@ export type LoopEvent =
       readonly result: Readonly<{ success: boolean; content: string }>;
     }
   | {
+      readonly type: "tool:progress";
+      readonly callId: string;
+      readonly progress: number;
+      readonly total?: number;
+      readonly message?: string;
+    }
+  | {
       readonly type: "iteration:end";
       readonly iteration: number;
       readonly usage: Readonly<{ input: number; output: number }>;
@@ -62,6 +69,9 @@ export interface ToolCallPart {
   readonly args: Record<string, unknown>;
   readonly status: "pending" | "running" | "success" | "error";
   readonly result?: string;
+  readonly progress?: number;
+  readonly total?: number;
+  readonly progressMessage?: string;
 }
 
 export interface PlanPart {

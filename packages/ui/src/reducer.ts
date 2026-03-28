@@ -86,6 +86,9 @@ function applyLoopEvent(
     case "tool:start":
       return applyToolStart(state, event.callId, event.name, event.args);
 
+    case "tool:progress":
+      return applyToolProgress(state, event.callId, event.progress, event.total, event.message);
+
     case "tool:end":
       return applyToolEnd(state, event.callId, event.result);
 
@@ -198,6 +201,30 @@ function applyToolStart(
 
   messages[messages.length - 1] = { ...lastMsg, parts };
   return { ...state, status: "tool-executing", messages };
+}
+
+// ─── Tool Progress ─────────────────────────────────────────────
+
+function applyToolProgress(
+  state: ChatState,
+  callId: string,
+  progress: number,
+  total?: number,
+  message?: string,
+): ChatState {
+  const messages = [...state.messages];
+  const lastMsg = messages[messages.length - 1];
+  if (!lastMsg || lastMsg.role !== "assistant") return state;
+
+  const parts = lastMsg.parts.map((part) => {
+    if (part.type === "tool-call" && part.callId === callId) {
+      return { ...part, progress, total, progressMessage: message } as ToolCallPart;
+    }
+    return part;
+  });
+
+  messages[messages.length - 1] = { ...lastMsg, parts };
+  return { ...state, messages };
 }
 
 // ─── Tool End ───────────────────────────────────────────────────
