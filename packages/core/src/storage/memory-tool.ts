@@ -49,7 +49,7 @@ export function createMemoryTool(backend: StorageBackend): Tool {
 function createListTool(backend: StorageBackend): Tool {
   return {
     name: "memory_list",
-    description: "List stored memories. Returns memory names.",
+    description: "List all stored memories with their full content.",
     parameters: { type: "object", properties: {} },
     execute: async (_args, _ctx) => {
       const records = await backend.read(COLLECTION);
@@ -58,8 +58,9 @@ function createListTool(backend: StorageBackend): Tool {
       }
       return {
         success: true,
-        content:
-          "Stored memories:\n" + records.map((r) => `- ${r.name}`).join("\n"),
+        content: records
+          .map((r) => `### ${r.name} [${r.type ?? "user"}]\n${r.content}`)
+          .join("\n\n"),
       };
     },
   };
