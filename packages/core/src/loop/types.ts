@@ -134,6 +134,11 @@ export type LoopEvent =
       readonly result: Readonly<{ success: boolean; content: string }>;
     }
   | {
+      readonly type: "tool:progress";
+      readonly callId: string;
+      readonly message: string;
+    }
+  | {
       readonly type: "iteration:end";
       readonly iteration: number;
       readonly usage: Readonly<{ input: number; output: number }>;

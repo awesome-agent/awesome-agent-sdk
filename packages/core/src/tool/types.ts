@@ -44,4 +44,5 @@ export interface ToolContext {
   readonly agentId: string;
   readonly abort?: AbortSignal;
   readonly extensions: Readonly<Record<string, unknown>>;
+  readonly emitProgress?: (message: string) => void;
 }

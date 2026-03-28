@@ -73,12 +73,15 @@ export async function executePhase(
     }
   }
 
-  // Execute tools
+  // Execute tools — emitProgress lets tools report live status via SSE
   const toolContext = {
     sessionId,
     agentId: agent.id,
     abort,
     extensions: config.toolExtensions ?? {},
+    emitProgress: (message: string) => {
+      emit({ type: "tool:progress", callId: "", message });
+    },
   };
 
   const execResult = await executor.execute(resolvedCalls, toolContext);
