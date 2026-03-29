@@ -1,7 +1,7 @@
 // JSON-RPC 2.0 client — sends requests, matches responses by ID
 
 import type { MCPMessage } from "@awesome-agent/agent-core";
-import { MCPRequestError, MCPConnectionError } from "@awesome-agent/agent-core";
+import { MCPRequestError, MCPConnectionError } from "./errors.js";
 
 // ─── Constants ──────────────────────────────────────────────
 

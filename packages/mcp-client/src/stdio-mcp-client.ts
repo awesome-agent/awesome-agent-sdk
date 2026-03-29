@@ -4,10 +4,7 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
-import {
-  MCPConnectionError,
-  MCPTimeoutError,
-} from "@awesome-agent/agent-core";
+import { MCPConnectionError, MCPTimeoutError } from "./errors.js";
 import type {
   MCPClient,
   MCPMessage,
