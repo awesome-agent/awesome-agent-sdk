@@ -6,11 +6,11 @@ Zero runtime dependencies. Provider-agnostic — bring your own LLM adapter.
 
 Part of the [awesome-agent-sdk](https://github.com/awesome-agent/awesome-agent-sdk) monorepo.
 
-Built on the standard agentic loop pattern — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture.
+Built on the standard agentic loop pattern — if you're familiar with modern coding agents, you'll recognize the architecture.
 
 ## What Does It Do?
 
-Think of ChatGPT or Claude — you send a message, you get a response. But what if the AI needs to **do things** in between? Read a file, run a command, call an API, then keep going based on the result?
+Think of ChatGPT or any chat assistant — you send a message, you get a response. But what if the AI needs to **do things** in between? Read a file, run a command, call an API, then keep going based on the result?
 
 That's what agent-core does. It runs a **loop**:
 
@@ -41,7 +41,7 @@ You'll also need an LLM adapter:
 ```bash
 npm install @awesome-agent/adapter-openai    # OpenAI, OpenRouter, Groq, Ollama
 # or
-npm install @awesome-agent/adapter-anthropic  # Claude (coming soon)
+npm install @awesome-agent/adapter-anthropic  # Anthropic (coming soon)
 ```
 
 You can import individual modules for tree-shaking:
@@ -125,7 +125,7 @@ console.log(result.output);
 
 ### 1. Coding Assistant (Read + Write + Shell)
 
-An agent that can read files, write code, and run commands — like a mini Claude Code:
+An agent that can read files, write code, and run commands — like a mini coding agent:
 
 ```typescript
 import fs from "fs/promises";
@@ -775,7 +775,7 @@ Iteration 11: "I've read everything. Let me compile the summary"
   ← Final summary combining all notes
 ```
 
-**Why this works even with context limits:** The agent writes intermediate notes to files. When the context fills up (after reading hundreds of pages), the pruner drops old messages — but the notes are safe on disk. The agent reads them back when it's time to compile the final summary. This is the same pattern Claude Code uses when analyzing large codebases.
+**Why this works even with context limits:** The agent writes intermediate notes to files. When the context fills up (after reading hundreds of pages), the pruner drops old messages — but the notes are safe on disk. The agent reads them back when it's time to compile the final summary. This is the same pattern production coding agents use when analyzing large codebases.
 
 **The same approach works for any large input:**
 
@@ -1354,7 +1354,7 @@ const llm = new OpenAIAdapter({
   apiKey: "sk-...",
 });
 
-// OpenRouter (access to Claude, Gemini, Llama, etc.)
+// OpenRouter (access to Anthropic, Gemini, Llama, etc.)
 const llm = new OpenAIAdapter({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: "or-...",

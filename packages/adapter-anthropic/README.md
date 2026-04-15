@@ -1,8 +1,8 @@
 # @awesome-agent/adapter-anthropic
 
-Anthropic Claude adapter for [@awesome-agent/agent-core](../core).
+Anthropic adapter for [@awesome-agent/agent-core](../core).
 
-Uses the native [Anthropic Messages API](https://docs.anthropic.com/en/api/messages) — not the OpenAI compatibility layer. Supports streaming, tool use, and all Claude models.
+Uses the native [Anthropic Messages API](https://docs.anthropic.com/en/api/messages) — not the OpenAI compatibility layer. Supports streaming, tool use, and all Anthropic models.
 
 ## Installation
 
@@ -58,10 +58,10 @@ const tools = new DefaultToolRegistry();
 const loop = new AgenticLoop({
   llm,
   agent: {
-    id: "claude-agent",
-    name: "Claude Agent",
+    id: "anthropic-agent",
+    name: "Anthropic Agent",
     prompt: "You are a helpful assistant.",
-    model: "claude-sonnet-4-20250514",
+    model: "<model-id>",
   },
   tools,
   executor: new DefaultToolExecutor(tools),
@@ -69,7 +69,7 @@ const loop = new AgenticLoop({
   context: new DefaultContextBuilder(),
 });
 
-const result = await loop.run("Hello Claude!", "session-1");
+const result = await loop.run("Hello!", "session-1");
 console.log(result.output);
 ```
 

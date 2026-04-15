@@ -2,7 +2,7 @@
 
 A modular TypeScript SDK for building AI agents that think, use tools, and loop until the job is done.
 
-Built on the standard **agentic loop** pattern (gather context → take action → verify results → repeat). Extensible by design — if you're familiar with tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), you'll recognize the architecture. Zero lock-in — bring your own LLM, storage, and tools.
+Built on the standard **agentic loop** pattern (gather context → take action → verify results → repeat). Extensible by design — if you're familiar with modern coding agents, you'll recognize the architecture. Zero lock-in — bring your own LLM, storage, and tools.
 
 ```
                         ┌─────────────────────────────────────────┐
@@ -21,7 +21,7 @@ Your prompt ──────────► │  Gather ───► Act ─�
 |---------|-------------|--------|
 | [@awesome-agent/agent-core](packages/core) | Agentic loop engine — interfaces, state machine, hooks, tools, skills, memory, MCP | Stable |
 | [@awesome-agent/adapter-openai](packages/adapter-openai) | OpenAI-compatible adapter (OpenAI, OpenRouter, Groq, Ollama, Together) | Stable |
-| [@awesome-agent/adapter-anthropic](packages/adapter-anthropic) | Anthropic Claude adapter (native Messages API) | Stable |
+| [@awesome-agent/adapter-anthropic](packages/adapter-anthropic) | Anthropic adapter (native Messages API) | Stable |
 | [@awesome-agent/adapter-postgres](packages/adapter-postgres) | PostgreSQL memory store (production) | Stable |
 | [@awesome-agent/adapter-filesystem](packages/adapter-filesystem) | File system memory store (local dev, CLI, debugging) | Stable |
 | [@awesome-agent/mcp-client](packages/mcp-client) | MCP transport (stdio) — connect to any MCP server | Stable |
@@ -665,7 +665,7 @@ npm run dev                  # Opens http://localhost:3000
 - **Token Estimation** — Adaptive learning from real LLM usage (EMA)
 - **Context Management** — Pruning + streaming compaction for long conversations
 - **Retry/Backoff** — Exponential backoff with jitter for LLM errors
-- **Provider Agnostic** — Works with OpenAI, Claude, Groq, Ollama, or any custom LLM
+- **Provider Agnostic** — Works with OpenAI, Anthropic, Groq, Ollama, or any custom LLM
 
 ## Development
 

@@ -1,5 +1,5 @@
 // StdioMCPClient — spawns an MCP server as child process, communicates via stdin/stdout
-// Used by: Claude Desktop, Cursor, Claude Code — the standard MCP transport
+// Used by: MCP-compatible desktop clients and IDE integrations — the standard MCP transport
 
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";

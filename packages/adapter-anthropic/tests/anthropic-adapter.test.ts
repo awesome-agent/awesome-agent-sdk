@@ -24,7 +24,7 @@ function mockFetchResponse(chunks: string[], status = 200): Response {
 }
 
 const baseRequest: LLMRequest = {
-  model: "claude-sonnet-4-20250514",
+  model: "test-model",
   systemPrompt: "You are helpful.",
   messages: [{ role: "user", content: "hello" }],
   temperature: 0.7,
@@ -83,7 +83,7 @@ describe("AnthropicAdapter", () => {
     });
     for await (const _ of stream) {}
 
-    expect(capturedBody.model).toBe("claude-sonnet-4-20250514");
+    expect(capturedBody.model).toBe("test-model");
     expect(capturedBody.system).toBe("You are helpful.");
     expect(capturedBody.stream).toBe(true);
     expect(capturedBody.max_tokens).toBe(1000);
@@ -155,7 +155,7 @@ describe("AnthropicAdapter", () => {
     });
 
     const s = await adapter.stream({
-      model: "claude-sonnet-4-20250514",
+      model: "test-model",
       systemPrompt: "sys",
       messages: [
         { role: "user", content: "read file" },

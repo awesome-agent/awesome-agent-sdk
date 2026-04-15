@@ -1,4 +1,4 @@
-// Anthropic Claude adapter — native Messages API
+// Anthropic adapter — native Messages API
 // Responsibility: HTTP communication + request building. Parsing delegated to AnthropicStreamParser.
 
 import type {

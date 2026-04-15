@@ -1,7 +1,7 @@
 {
   "name": "@awesome-agent/adapter-anthropic",
   "version": "0.1.1",
-  "description": "Anthropic Claude adapter for @awesome-agent/agent-core",
+  "description": "Anthropic Messages API adapter for @awesome-agent/agent-core",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
