@@ -16,6 +16,12 @@ export interface OpenAIAdapterConfig {
   readonly baseURL: string;
   readonly apiKey?: string;
   readonly defaultHeaders?: Readonly<Record<string, string>>;
+  /**
+   * Extra fields merged into every request body (OpenRouter-style provider
+   * options, reasoning toggles, response_format, etc.). Values in `extraBody`
+   * override adapter-generated fields of the same name.
+   */
+  readonly extraBody?: Readonly<Record<string, unknown>>;
 }
 
 // ─── OpenAI Wire Format (request) ───────────────────────────
@@ -94,6 +100,10 @@ export class OpenAIAdapter implements LLMAdapter {
     }
     if (request.tools?.length) {
       body.tools = request.tools.map(this.convertTool);
+    }
+
+    if (this.config.extraBody) {
+      Object.assign(body, this.config.extraBody);
     }
 
     return body;
