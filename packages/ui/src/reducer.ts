@@ -11,6 +11,7 @@ import type {
   MessagePart,
   TextPart,
   ToolCallPart,
+  ToolContentBlock,
   PartResolver,
   CustomPart,
 } from "./types.js";
@@ -232,18 +233,29 @@ function applyToolProgress(
 function applyToolEnd(
   state: ChatState,
   callId: string,
-  result: Readonly<{ success: boolean; content: string }>,
+  result: Readonly<{ success: boolean; content: string | readonly ToolContentBlock[] }>,
 ): ChatState {
   const messages = [...state.messages];
   const lastMsg = messages[messages.length - 1];
   if (!lastMsg || lastMsg.role !== "assistant") return state;
+
+  // Non-text blocks can't be represented in ToolCallPart.result (string field);
+  // UI consumers that want structured output should listen to the tool:end
+  // event directly (PartResolver or app-level handler) and project it into
+  // CustomParts of their own.
+  const resultText = typeof result.content === "string"
+    ? result.content
+    : result.content
+        .filter((b): b is Extract<ToolContentBlock, { type: "text" }> => b.type === "text")
+        .map((b) => b.text)
+        .join("\n");
 
   const parts = lastMsg.parts.map((part) => {
     if (part.type === "tool-call" && part.callId === callId) {
       return {
         ...part,
         status: result.success ? "success" : "error",
-        result: result.content,
+        result: resultText,
       } as ToolCallPart;
     }
     return part;

@@ -2,6 +2,20 @@
 // UI-facing types — mirrors the wire protocol from @awesome-agent/agent-core
 // Intentionally decoupled: this package never imports from agent-core
 
+/**
+ * Mirror of `@awesome-agent/agent-core` ToolContentBlock — tools that produce
+ * rich output (images, resources, etc.) return arrays of these; simple tools
+ * still emit plain strings. Kept in sync by shape, not by import (package
+ * is intentionally decoupled).
+ */
+export type ToolContentBlock =
+  | { readonly type: "text"; readonly text: string }
+  | {
+      readonly type: "image";
+      readonly url: string;
+      readonly resourceId?: string;
+    };
+
 // ─── Loop Event (wire protocol — what the transport delivers) ───
 
 export type LoopPhase =
@@ -26,7 +40,10 @@ export type LoopEvent =
   | {
       readonly type: "tool:end";
       readonly callId: string;
-      readonly result: Readonly<{ success: boolean; content: string }>;
+      readonly result: Readonly<{
+        success: boolean;
+        content: string | readonly ToolContentBlock[];
+      }>;
     }
   | {
       readonly type: "tool:progress";

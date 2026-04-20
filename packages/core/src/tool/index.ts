@@ -1,5 +1,6 @@
 // Types
-export type { Tool, ToolCall, ToolResult, ToolFile, ToolContext, ToolProgressData } from "./types.js";
+export type { Tool, ToolCall, ToolResult, ToolContentBlock, ToolFile, ToolContext, ToolProgressData } from "./types.js";
+export { serializeToolContent } from "./types.js";
 export type {
   ToolRegistry,
   ToolExecutor,

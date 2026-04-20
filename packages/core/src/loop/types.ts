@@ -3,6 +3,7 @@
 
 import type { LLMAdapter, Message, UserContent } from "../llm/types.js";
 import type { ToolRegistry, ToolExecutor } from "../tool/executor-types.js";
+import type { ToolContentBlock } from "../tool/types.js";
 import type { HookManager } from "../hook/types.js";
 import type { ContextBuilder, Pruner, Compactor, TokenEstimator } from "../context/types.js";
 import type {
@@ -131,7 +132,10 @@ export type LoopEvent =
   | {
       readonly type: "tool:end";
       readonly callId: string;
-      readonly result: Readonly<{ success: boolean; content: string }>;
+      readonly result: Readonly<{
+        success: boolean;
+        content: string | readonly ToolContentBlock[];
+      }>;
     }
   | {
       readonly type: "tool:progress";

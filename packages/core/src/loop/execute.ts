@@ -3,6 +3,7 @@
 
 import type { Message } from "../llm/types.js";
 import type { ToolCall } from "../tool/types.js";
+import { serializeToolContent } from "../tool/types.js";
 import { HookEvent } from "../hook/types.js";
 import type { LoopConfig, LoopEvent, ToolCallLog } from "./types.js";
 
@@ -90,10 +91,16 @@ export async function executePhase(
     const result = execResult.results.get(tc.id);
     if (!result) continue;
 
+    // LLM provider messages carry tool results as strings (OpenAI-compatible).
+    // Block-array content (e.g. image blocks) is serialized to text here;
+    // downstream UI receives the full structured content via the tool:end
+    // event below.
+    const serializedForLLM = serializeToolContent(result.content);
+
     messages.push({
       role: "tool",
       toolCallId: tc.id,
-      content: result.content,
+      content: serializedForLLM,
       isError: !result.success,
     });
 
@@ -107,8 +114,8 @@ export async function executePhase(
       name: tc.name,
       args: tc.args,
       ...(result.success
-        ? { result: result.content }
-        : { error: result.content }),
+        ? { result: serializedForLLM }
+        : { error: serializedForLLM }),
     });
 
     // PostToolUse hook

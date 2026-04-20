@@ -23,11 +23,41 @@ export interface ToolCall {
   readonly args: Record<string, unknown>;
 }
 
+/**
+ * Structured tool-output blocks. Tools that produce rich results (images,
+ * resources, etc.) return an array of blocks; simple tools still return a
+ * plain string via `ToolResult.content`. Consumers (stream events, LLM
+ * adapters) can opt into block handling or fall back to a serialized string
+ * via `serializeToolContent`.
+ */
+export type ToolContentBlock =
+  | { readonly type: "text"; readonly text: string }
+  | {
+      readonly type: "image";
+      readonly url: string;
+      /** Optional stable handle the UI can use to resolve a fresh URL after expiry. */
+      readonly resourceId?: string;
+    };
+
 export interface ToolResult {
   readonly success: boolean;
-  readonly content: string;
+  readonly content: string | readonly ToolContentBlock[];
   readonly files?: readonly ToolFile[];
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Flatten block content to a plain string — used when the downstream consumer
+ * (LLM provider, legacy log) only accepts strings. Drops non-text blocks.
+ */
+export function serializeToolContent(
+  content: string | readonly ToolContentBlock[]
+): string {
+  if (typeof content === "string") return content;
+  return content
+    .filter((b): b is Extract<ToolContentBlock, { type: "text" }> => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
 }
 
 export interface ToolFile {

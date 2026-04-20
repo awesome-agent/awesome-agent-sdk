@@ -12,6 +12,7 @@ export type {
   ToolCallPart,
   PlanPart,
   CustomPart,
+  ToolContentBlock,
   MessagePartStatus,
   MessageRole,
   ChatStatus,

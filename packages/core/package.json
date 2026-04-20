@@ -1,6 +1,6 @@
 {
   "name": "@awesome-agent/agent-core",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Agentic loop core library — provider-agnostic, server-independent",
   "type": "module",
   "main": "dist/index.js",
